@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gary Ramli</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/globe.gl"></script>
+</head>
+<body>
+    <main>
+        <section class="hero">
+            <div class="hero-intro fade-in">
+                <span class="overline">Personal</span>
+                <h1>Gary Ramli</h1>
+                <p class="tagline">Welcome to my corner of the internet.</p>
+            </div>
+
+            <div id="globe-container" class="fade-in delay-1"></div>
+
+            <nav class="social-links fade-in delay-2">
+                <a href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a>
+                <span class="dot"></span>
+                <a href="https://linkedin.com/in/" target="_blank" rel="noopener">LinkedIn</a>
+                <span class="dot"></span>
+                <a href="https://example.com" target="_blank" rel="noopener">Company</a>
+            </nav>
+        </section>
+
+        <section class="vitals fade-in delay-3">
+            <div class="vitals-grid">
+                <div class="vital-card">
+                    <span class="vital-label">Steps</span>
+                    <span class="vital-value" id="steps">&mdash;</span>
+                </div>
+                <div class="vital-card">
+                    <span class="vital-label">Distance</span>
+                    <span class="vital-value" id="distance">&mdash;</span>
+                </div>
+                <div class="vital-card">
+                    <span class="vital-label">Calories</span>
+                    <span class="vital-value" id="calories">&mdash;</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+
+    <script src="main.js"></script>
+</body>
+</html>
