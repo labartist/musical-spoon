@@ -20,21 +20,21 @@ const globe = Globe()(globeEl)
     .hexPolygonResolution(3)
     .hexPolygonMargin(0.35)
     .hexPolygonUseDots(false)
-    .hexPolygonColor(() => '#b8a9e8')
+    .hexPolygonColor(() => '#baa6d0')
     // Antarctica as individual label dots to match hex style
     .labelsData([])
     .labelLat(d => d.lat)
     .labelLng(d => d.lng)
     .labelText(() => '')
-    .labelDotRadius(0.22)
-    .labelColor(() => '#b8a9e8')
+    .labelDotRadius(0.35)
+    .labelColor(() => '#baa6d0')
     .labelResolution(6)
     .labelAltitude(0.001)
     // Location pin — white, taller, with glow
     .pointsData([])
     .pointColor(() => '#ffffff')
     .pointAltitude(0.14)
-    .pointRadius(0.25)
+    .pointRadius(0.05)
     .pointsMerge(false)
     // 3D surface pulse rings — conform to globe curvature
     .ringsData([])
@@ -98,15 +98,19 @@ fetch(GEOJSON_URL)
         const aq = data.features.find(f => f.properties.ISO_A2 === 'AQ');
         if (aq) {
             const dots = [];
-            const step = 1.8; // spacing to roughly match hex resolution 3
+            const step = 0.9; // match hex resolution 3 (~1° spacing)
+            let row = 0;
             for (let lat = -90; lat <= -60; lat += step) {
                 // Adjust longitude step for latitude convergence
-                const lngStep = step / Math.max(Math.cos(lat * Math.PI / 180), 0.1);
-                for (let lng = -180; lng < 180; lng += lngStep) {
+                const lngStep = step / Math.max(Math.cos(lat * Math.PI / 180), 0.05);
+                // Hex stagger: offset every other row by half a cell
+                const offset = (row % 2 === 0) ? 0 : lngStep / 2;
+                for (let lng = -180 + offset; lng < 180; lng += lngStep) {
                     if (pointInFeature(lat, lng, aq)) {
                         dots.push({ lat, lng });
                     }
                 }
+                row++;
             }
             globe.labelsData(dots);
         }

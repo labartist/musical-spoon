@@ -8,7 +8,14 @@
 
 html {
     scroll-behavior: smooth;
+    /* scrollbar-color: #a9b8e8 #08080c;  */
+    scrollbar-width: thin;
 }
+
+/* ::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #08080c; }
+::-webkit-scrollbar-thumb { background: #a9b8e8; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a9b8e8; } */
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -34,7 +41,7 @@ body {
     height: 600px;
     background: radial-gradient(circle, #6a5acd, transparent 70%);
     top: -10%;
-    right: -5%;
+    right: -20%;
 }
 
 .orb-2 {
