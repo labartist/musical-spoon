@@ -42,14 +42,7 @@ const globe = Globe()(globeEl)
     .ringMaxRadius(5)
     .ringPropagationSpeed(1.5)
     .ringRepeatPeriod(1400)
-    // Steady glow on pin
-    .htmlElementsData([])
-    .htmlElement(() => {
-        const el = document.createElement('div');
-        el.className = 'pin-glow';
-        return el;
-    })
-    .htmlTransitionDuration(400);
+;
 
 // Dark globe surface — access Three.js via globe's scene
 const mat = globe.globeMaterial();
@@ -142,16 +135,19 @@ function setLocation(lat, lng) {
     const point = [{ lat, lng }];
     globe.pointsData(point);
     globe.ringsData(point);
-    globe.htmlElementsData(point);
     globe.pointOfView({ lat, lng, altitude: 2.5 }, 1000);
 }
 
 // Track pin screen position and visibility each frame
+// Smooth opacity + scale with lerp to avoid instant jumps
+let currentOpacity = 0.5;
+let currentScale = 1.0;
+const LERP_SPEED = 0.9; // lower = smoother/slower transition
+
 (function trackPin() {
     if (pinLat !== null) {
         const coords = globe.getScreenCoords(pinLat, pinLng);
         if (coords) {
-            // Coordinates are in canvas pixels relative to the wrapper
             const x = coords.x;
             const y = coords.y;
 
@@ -164,27 +160,36 @@ function setLocation(lat, lng) {
             const angularDist = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             const halfPI = Math.PI / 2;
 
-            // Gradual opacity: full when in view, dimmer when behind
-            let opacity;
+            // Target opacity and scale based on angular distance
+            let targetOpacity, targetScale;
             if (angularDist < halfPI * 0.7) {
-                // Clearly in front — full brightness
-                opacity = 0.5;
+                // Clearly in front — full glow
+                targetOpacity = 1.0;
+                targetScale = 1.5;
             } else if (angularDist < halfPI) {
-                // Approaching edge — brightest
+                // Approaching edge — fading
                 const t = (angularDist - halfPI * 0.7) / (halfPI * 0.3);
-                opacity = 0.5 + t * 0.5;
+                targetOpacity = 1.0 - t * 0.3;
+                targetScale = 1.5 - t * 0.5;
             } else if (angularDist < Math.PI * 0.7) {
-                // Behind but near edge — bright, fading
+                // Behind but near edge
                 const t = (angularDist - halfPI) / (Math.PI * 0.2);
-                opacity = 1.0 - t * 0.3;
+                targetOpacity = 0.7 - t * 0.3;
+                targetScale = 1.0 - t * 0.3;
             } else {
-                // Deep behind — dimmer
-                opacity = 0.7;
+                // Deep behind — dim
+                targetOpacity = 0.4;
+                targetScale = 0.7;
             }
+
+            // Lerp towards targets for smooth gradual change
+            currentOpacity += (targetOpacity - currentOpacity) * LERP_SPEED;
+            currentScale += (targetScale - currentScale) * LERP_SPEED;
 
             persistentGlow.style.left = `${x}px`;
             persistentGlow.style.top = `${y}px`;
-            persistentGlow.style.opacity = opacity;
+            persistentGlow.style.opacity = currentOpacity;
+            persistentGlow.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
         }
     }
     requestAnimationFrame(trackPin);

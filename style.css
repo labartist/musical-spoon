@@ -199,29 +199,17 @@ h1 {
     color: #ececf0;
 }
 
-/* Steady glow on the pin (front-facing) */
-.pin-glow {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 40%, transparent 70%);
-    box-shadow: 0 0 14px 8px rgba(255,255,255,0.35);
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-}
-
-/* Persistent faded glow when pin is behind globe */
+/* Pin glow — unified element controlled by JS lerp */
 .pin-glow-persistent {
     position: absolute;
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 40%, transparent 70%);
-    box-shadow: 0 0 18px 10px rgba(255,255,255,0.12);
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 30%, rgba(255,255,255,0.1) 60%, transparent 80%);
+    box-shadow: 0 0 18px 10px rgba(255,255,255,0.35);
     pointer-events: none;
     transform: translate(-50%, -50%);
     opacity: 0;
-    transition: opacity 0.6s ease;
     z-index: 1;
 }
 
