@@ -109,15 +109,8 @@ fetch(GEOJSON_URL)
         }
     });
 
-// Get the visitor's location and pin it on the globe
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation(pos.coords.latitude, pos.coords.longitude),
-        () => setLocation(-33.8688, 151.2093) // fallback: Sydney
-    );
-} else {
-    setLocation(-33.8688, 151.2093);
-}
+// Fallback location + vitals until API responds
+setLocation(-6.2088, 106.8456); // fallback: Jakarta
 
 // Persistent glow overlay — stays visible (faded) when pin is behind globe
 // Insert into globe.gl's own wrapper div so getScreenCoords aligns directly
@@ -200,18 +193,48 @@ window.addEventListener('resize', () => {
     globe.width(size).height(size);
 });
 
-// ── Vitals (placeholder) ──────────────────────────────
-// Apple Health has no web API. To display real data you could:
-//   1. Create an iOS Shortcut that reads HealthKit → posts JSON to your server
-//   2. Serve the latest data from a simple API endpoint
-//   3. Fetch it here and populate the cards
-//
-// For now, show demo values:
+// ── Vitals ────────────────────────────────────────────
+// Vercel serverless API — relative path, works automatically
+const VITALS_API = '/api/data';
+
 function setVitals({ steps, distance, calories }) {
     document.getElementById('steps').textContent = steps.toLocaleString();
     document.getElementById('distance').textContent = distance.toFixed(1);
     document.getElementById('calories').textContent = calories.toLocaleString();
 }
 
-// Demo data — replace with a fetch() to your API
-setVitals({ steps: 8432, distance: 6.2, calories: 340 });
+// Fetch live data from Vercel API, fall back to demo values
+fetch(VITALS_API)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+        setVitals({
+            steps: data.steps,
+            distance: data.distance,
+            calories: data.calories,
+        });
+        // Update globe to owner's real location
+        if (data.lat && data.lng) {
+            setLocation(data.lat, data.lng);
+        }
+    })
+    .catch(() => {
+        // API not set up yet — show demo values
+        setVitals({ steps: 8432, distance: 6.2, calories: 340 });
+    });
+
+// Refresh data every 5 minutes
+setInterval(() => {
+    fetch(VITALS_API)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            setVitals({
+                steps: data.steps,
+                distance: data.distance,
+                calories: data.calories,
+            });
+            if (data.lat && data.lng) {
+                setLocation(data.lat, data.lng);
+            }
+        })
+        .catch(() => {});
+}, 5 * 60 * 1000);
