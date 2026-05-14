@@ -1,0 +1,30 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "Personal Portfolio with Vercel Analytics",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labartist/musical-spoon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/labartist/musical-spoon/issues"
+  },
+  "homepage": "https://github.com/labartist/musical-spoon#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "vite": "^8.0.12"
+  }
+}
