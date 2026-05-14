@@ -1,3 +1,7 @@
+// ── Vercel Analytics ──────────────────────────────────────────────
+import { inject } from '@vercel/analytics';
+inject();
+
 // ── Globe ──────────────────────────────────────────────
 const globeEl = document.getElementById('globe-container');
 const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';
