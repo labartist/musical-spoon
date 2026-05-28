@@ -235,6 +235,29 @@ h1 {
     color: #ececf0;
 }
 
+/* Footer colophon */
+.colophon {
+    padding: 2rem 0 3rem;
+    text-align: center;
+}
+
+.colophon p {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #333;
+    letter-spacing: 0.02em;
+}
+
+.colophon a {
+    color: #444;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.colophon a:hover {
+    color: #707078;
+}
+
 /* Pin glow — unified element controlled by JS lerp */
 .pin-glow-persistent {
     position: absolute;

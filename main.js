@@ -227,11 +227,11 @@ fetch(VITALS_API)
 
 // ── Weather & Time ───────────────────────────────────
 const WMO_CODES = {
-    0: 'Clear', 1: 'Mostly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
-    45: 'Foggy', 48: 'Fog', 51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle',
-    61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain', 71: 'Light Snow', 73: 'Snow',
-    75: 'Heavy Snow', 80: 'Light Showers', 81: 'Showers', 82: 'Heavy Showers',
-    95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'
+    0: ['Clear', '☀'], 1: ['Mostly Clear', '☀'], 2: ['Partly Cloudy', '⛅'], 3: ['Overcast', '☁'],
+    45: ['Foggy', '☁'], 48: ['Fog', '☁'], 51: ['Light Drizzle', '☂'], 53: ['Drizzle', '☂'], 55: ['Heavy Drizzle', '☂'],
+    61: ['Light Rain', '☂'], 63: ['Rain', '☂'], 65: ['Heavy Rain', '☂'], 71: ['Light Snow', '❄'], 73: ['Snow', '❄'],
+    75: ['Heavy Snow', '❄'], 80: ['Light Showers', '☂'], 81: ['Showers', '☂'], 82: ['Heavy Showers', '☂'],
+    95: ['Thunderstorm', '⚡'], 96: ['Thunderstorm', '⚡'], 99: ['Thunderstorm', '⚡']
 };
 
 let locationTimezone = null;
@@ -243,8 +243,13 @@ function fetchWeather(lat, lng) {
         .then(data => {
             const temp = Math.round(data.current.temperature_2m);
             const code = data.current.weather_code;
-            const condition = WMO_CODES[code] || '';
-            document.getElementById('weather').textContent = `${temp}°C ${condition}`;
+            const [condition, icon] = WMO_CODES[code] || ['', ''];
+            // Use moon icon at night (between 6pm and 6am local time)
+            const tz = data.timezone;
+            const hour = new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+            const isNight = parseInt(hour) >= 18 || parseInt(hour) < 6;
+            const weatherIcon = (isNight && code <= 1) ? '☾' : icon;
+            document.getElementById('weather').textContent = `${weatherIcon} ${temp}°C ${condition}`;
             locationTimezone = data.timezone;
             // Show city from timezone (e.g. "Asia/Jakarta" → "Jakarta")
             const city = data.timezone.split('/').pop().replace(/_/g, ' ');
