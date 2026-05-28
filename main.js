@@ -212,15 +212,58 @@ fetch(VITALS_API)
             distance: data.distance,
             calories: data.calories,
         });
-        // Update globe to owner's real location
+        // Update globe to owner's real location + fetch weather
         if (data.lat && data.lng) {
             setLocation(data.lat, data.lng);
+            fetchWeather(data.lat, data.lng);
         }
     })
     .catch(() => {
         // API not set up yet — show demo values
         setVitals({ steps: 8432, distance: 6.2, calories: 340 });
+        fetchWeather(-6.2088, 106.8456); // fallback: Jakarta
     });
+
+// ── Weather & Time ───────────────────────────────────
+const WMO_CODES = {
+    0: 'Clear', 1: 'Mostly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Fog', 51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle',
+    61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain', 71: 'Light Snow', 73: 'Snow',
+    75: 'Heavy Snow', 80: 'Light Showers', 81: 'Showers', 82: 'Heavy Showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'
+};
+
+let locationTimezone = null;
+
+function fetchWeather(lat, lng) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=auto`;
+    fetch(url)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+            const condition = WMO_CODES[code] || '';
+            document.getElementById('weather').textContent = `${temp}°C ${condition}`;
+            locationTimezone = data.timezone;
+        })
+        .catch(() => {});
+}
+
+function updateLocalTime() {
+    const tz = locationTimezone || 'Asia/Jakarta';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    document.getElementById('local-time').textContent = timeStr;
+}
+
+// Update clock every second
+updateLocalTime();
+setInterval(updateLocalTime, 1000);
 
 // Refresh data every 5 minutes
 setInterval(() => {
@@ -234,6 +277,7 @@ setInterval(() => {
             });
             if (data.lat && data.lng) {
                 setLocation(data.lat, data.lng);
+                fetchWeather(data.lat, data.lng);
             }
         })
         .catch(() => {});
