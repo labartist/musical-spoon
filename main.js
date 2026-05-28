@@ -109,9 +109,6 @@ fetch(GEOJSON_URL)
         }
     });
 
-// Fallback location + vitals until API responds
-setLocation(-6.2088, 106.8456); // fallback: Jakarta
-
 // Persistent glow overlay — stays visible (faded) when pin is behind globe
 // Insert into globe.gl's own wrapper div so getScreenCoords aligns directly
 const persistentGlow = document.createElement('div');
@@ -121,6 +118,9 @@ globeWrapper.style.position = 'relative';
 globeWrapper.appendChild(persistentGlow);
 
 let pinLat = null, pinLng = null;
+
+// Fallback location + vitals until API responds
+setLocation(-6.2088, 106.8456); // fallback: Jakarta
 
 function setLocation(lat, lng) {
     pinLat = lat;
