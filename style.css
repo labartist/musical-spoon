@@ -107,6 +107,7 @@ h1 {
     line-height: 1.6;
     max-width: 400px;
     margin: 0 auto;
+    text-align: center;
 }
 
 /* Globe */
@@ -123,15 +124,16 @@ h1 {
 .social-links {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 1.25rem;
-    margin-top: 0.5rem;
+    margin-top: 1.5rem;
 }
 
 .social-links a {
     color: #707078;
     text-decoration: none;
     font-size: 0.85rem;
-    font-weight: 400;
+    font-weight: 600;
     letter-spacing: 0.02em;
     position: relative;
     padding-bottom: 2px;
@@ -176,9 +178,17 @@ h1 {
     width: 100%;
 }
 
+.context-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #444;
+}
+
 .context-time {
     font-size: 2.5rem;
-    font-weight: 300;
+    font-weight: 600;
     color: #ececf0;
     letter-spacing: -0.02em;
 }

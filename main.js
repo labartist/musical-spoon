@@ -222,6 +222,7 @@ fetch(VITALS_API)
         // API not set up yet — show demo values
         setVitals({ steps: 8432, distance: 6.2, calories: 340 });
         fetchWeather(-6.2088, 106.8456); // fallback: Jakarta
+        document.getElementById('location-label').textContent = 'Local Time — Jakarta';
     });
 
 // ── Weather & Time ───────────────────────────────────
@@ -245,6 +246,9 @@ function fetchWeather(lat, lng) {
             const condition = WMO_CODES[code] || '';
             document.getElementById('weather').textContent = `${temp}°C ${condition}`;
             locationTimezone = data.timezone;
+            // Show city from timezone (e.g. "Asia/Jakarta" → "Jakarta")
+            const city = data.timezone.split('/').pop().replace(/_/g, ' ');
+            document.getElementById('location-label').textContent = `Local Time — ${city}`;
         })
         .catch(() => {});
 }
