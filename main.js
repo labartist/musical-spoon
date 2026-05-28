@@ -199,8 +199,8 @@ const VITALS_API = '/api/data';
 
 function setVitals({ steps, distance, calories }) {
     document.getElementById('steps').textContent = steps.toLocaleString();
-    document.getElementById('distance').textContent = distance.toFixed(1);
-    document.getElementById('calories').textContent = calories.toLocaleString();
+    document.getElementById('distance').textContent = distance.toFixed(1) + ' km';
+    document.getElementById('calories').textContent = Math.round(calories).toLocaleString();
 }
 
 // Fetch live data from Vercel API, fall back to demo values
