@@ -36,24 +36,83 @@
             <span class="context-weather" id="weather">&mdash;</span>
         </section>
 
-        <section class="vitals fade-in delay-3">
-            <div class="vitals-grid">
-                <div class="vital-card">
-                    <span class="vital-label">Steps</span>
-                    <span class="vital-value" id="steps">&mdash;</span>
-                </div>
-                <div class="vital-card">
-                    <span class="vital-label">Distance</span>
-                    <span class="vital-value" id="distance">&mdash;</span>
-                </div>
-                <div class="vital-card">
-                    <span class="vital-label">Calories</span>
-                    <span class="vital-value" id="calories">&mdash;</span>
+        <details class="vitals dropdown fade-in delay-3" open>
+            <summary class="dropdown-toggle">
+                <span class="dropdown-label">Daily Vitals</span>
+                <span class="dropdown-arrow"></span>
+            </summary>
+            <div class="dropdown-content">
+                <div class="vitals-grid">
+                    <div class="vital-card">
+                        <span class="vital-label">Steps</span>
+                        <span class="vital-value" id="steps">&mdash;</span>
+                    </div>
+                    <div class="vital-card">
+                        <span class="vital-label">Distance</span>
+                        <span class="vital-value" id="distance">&mdash;</span>
+                    </div>
+                    <div class="vital-card">
+                        <span class="vital-label">Calories</span>
+                        <span class="vital-value" id="calories">&mdash;</span>
+                    </div>
                 </div>
             </div>
-        </section>
+        </details>
+        <details class="showcase dropdown fade-in delay-3">
+            <summary class="dropdown-toggle">
+                <span class="dropdown-label">Parklane Collections Showcase</span>
+                <span class="dropdown-arrow"></span>
+            </summary>
+            <div class="dropdown-content">
+            <div class="showcase-track">
+                <a href="https://www.parklane-furniture.com/collections/carlton" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcarlton%2Fmain.jpg&w=640&q=75" alt="Carlton" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Carlton</span>
+                    <span class="showcase-type">Wicker & Aluminium / Teak</span>
+                </a>
+                <a href="https://www.parklane-furniture.com/collections/cairo" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcairo%2Fmain.jpg&w=640&q=75" alt="Cairo" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Cairo</span>
+                    <span class="showcase-type">Rope & Teak</span>
+                </a>
+                <a href="https://www.parklane-furniture.com/collections/irving" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Firving%2Fmain.jpg&w=640&q=75" alt="Irving" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Irving</span>
+                    <span class="showcase-type">Wicker & Aluminium</span>
+                </a>
+                <a href="https://www.parklane-furniture.com/collections/rodeo" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Frodeo%2Fmain.jpg&w=640&q=75" alt="Rodeo" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Rodeo</span>
+                    <span class="showcase-type">Rope & Aluminium</span>
+                </a>
+                <a href="https://www.parklane-furniture.com/collections/lorenza" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Florenza%2Fmain.jpg&w=640&q=75" alt="Lorenza" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Lorenza</span>
+                    <span class="showcase-type">Rope & Teak</span>
+                </a>
+                <a href="https://www.parklane-furniture.com/collections/peralta" target="_blank" rel="noopener" class="showcase-card">
+                    <div class="showcase-img">
+                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fperalta%2Fmain.jpg&w=640&q=75" alt="Peralta" loading="lazy">
+                    </div>
+                    <span class="showcase-name">Peralta</span>
+                    <span class="showcase-type">Rope & Teak</span>
+                </a>
+            </div>
+            </div>
+        </details>
+
         <footer class="colophon fade-in delay-3">
-            <p>Built with <a href="https://globe.gl" target="_blank" rel="noopener">globe.gl</a> · Powered by Apple Health · Hosted on <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a></p>
+            <p>Built with <a href="https://globe.gl" target="_blank" rel="noopener">globe.gl</a> · <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · Powered by Apple Health · Hosted on <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a></p>
         </footer>
     </main>
 

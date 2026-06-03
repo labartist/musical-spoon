@@ -1,3 +1,42 @@
+// ── Dropdown transitions ─────────────────────────────
+// Animate <details> open/close with CSS grid transition
+document.querySelectorAll('.dropdown').forEach(details => {
+    const content = details.querySelector('.dropdown-content');
+    const summary = details.querySelector('.dropdown-toggle');
+
+    // If already open on load, set inline styles to match
+    if (details.open) {
+        content.style.gridTemplateRows = '1fr';
+        content.style.opacity = '1';
+    }
+
+    summary.addEventListener('click', e => {
+        e.preventDefault();
+        if (details.open) {
+            // Closing: animate first, then remove open
+            content.style.gridTemplateRows = '0fr';
+            content.style.opacity = '0';
+            content.addEventListener('transitionend', function handler(ev) {
+                if (ev.propertyName === 'grid-template-rows') {
+                    details.open = false;
+                    content.removeEventListener('transitionend', handler);
+                }
+            });
+        } else {
+            // Opening: set open first, then animate in next frame
+            details.open = true;
+            content.style.gridTemplateRows = '0fr';
+            content.style.opacity = '0';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    content.style.gridTemplateRows = '1fr';
+                    content.style.opacity = '1';
+                });
+            });
+        }
+    });
+});
+
 // ── Globe ──────────────────────────────────────────────
 const globeEl = document.getElementById('globe-container');
 const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';

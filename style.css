@@ -72,7 +72,7 @@ main {
     justify-content: center;
     flex: 1;
     text-align: center;
-    padding: 6rem 0 2rem;
+    padding: 6rem 0 0;
     gap: 1rem;
     width: 100%;
 }
@@ -117,7 +117,7 @@ h1 {
     align-items: center;
     justify-content: center;
     height: 480px;
-    margin: 1rem 0;
+    margin: 1rem 0 0;
 }
 
 /* Social links — text with animated underlines */
@@ -174,7 +174,7 @@ h1 {
     flex-direction: column;
     align-items: center;
     gap: 0.3rem;
-    padding: 1rem 0 0;
+    padding: 0 0 2.5rem;
     width: 100%;
 }
 
@@ -200,10 +200,89 @@ h1 {
     letter-spacing: 0.02em;
 }
 
-/* Vitals */
-.vitals {
+/* Shared dropdown (details/summary) */
+.dropdown {
     width: 100%;
-    padding: 3rem 0 4rem;
+    padding: 1rem 0;
+}
+
+.dropdown + .dropdown {
+    padding-top: 0;
+}
+
+summary.dropdown-toggle {
+    display: block !important;
+    list-style: none !important;
+    list-style-type: none !important;
+    text-align: center;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    user-select: none;
+}
+
+summary.dropdown-toggle::-webkit-details-marker {
+    display: none !important;
+}
+
+summary.dropdown-toggle::marker {
+    content: none !important;
+    display: none !important;
+}
+
+.dropdown-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #444;
+    transition: color 0.3s ease;
+}
+
+.dropdown-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #444;
+    transition: transform 0.3s ease, border-top-color 0.3s ease;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+.dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-toggle:hover .dropdown-label {
+    color: #555;
+}
+
+.dropdown-toggle:hover .dropdown-arrow {
+    border-top-color: #555;
+}
+
+/* Slide transition for dropdown content */
+.dropdown-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.35s ease, opacity 0.35s ease;
+}
+
+.dropdown[open] > .dropdown-content {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.dropdown-content > * {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Vitals */
+.vitals .vitals-grid {
+    padding: 1rem 0;
 }
 
 .vitals-grid {
@@ -233,6 +312,85 @@ h1 {
     font-weight: 600;
     letter-spacing: -0.02em;
     color: #ececf0;
+}
+
+/* Product showcase carousel */
+.showcase {
+    overflow: hidden;
+}
+
+.showcase-track {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 1rem 1rem;
+    scrollbar-width: none;
+}
+
+.showcase-track::-webkit-scrollbar {
+    display: none;
+}
+
+.showcase-card {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    transition: transform 0.3s ease;
+}
+
+.showcase-card:hover {
+    transform: translateY(-4px);
+}
+
+.showcase-img {
+    width: 200px;
+    height: 200px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #141418;
+    border: 1px solid #1a1a1f;
+}
+
+.showcase-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+}
+
+.showcase-card:hover .showcase-img img {
+    opacity: 1;
+}
+
+.showcase-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #ececf0;
+    padding: 0 0.15rem;
+}
+
+.showcase-type {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #555;
+    padding: 0 0.15rem;
+}
+
+@media (max-width: 640px) {
+    .showcase-card {
+        flex: 0 0 160px;
+    }
+
+    .showcase-img {
+        width: 160px;
+        height: 160px;
+    }
 }
 
 /* Footer colophon */
