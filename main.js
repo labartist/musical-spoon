@@ -205,7 +205,8 @@ globeWrapper.appendChild(persistentGlow);
 let pinLat = null, pinLng = null;
 
 // Fallback location + vitals until API responds
-setLocation(-6.2088, 106.8456); // fallback: Jakarta
+// Snap straight to Jakarta (no animated pan from 0,0) so the globe loads centered
+setLocation(HOME.lat, HOME.lng, 0); // fallback: Jakarta
 
 // Render travel city dots + the live location pin in one points layer
 function renderPoints() {
@@ -218,12 +219,12 @@ function renderPoints() {
     globe.pointsData(pts);
 }
 
-function setLocation(lat, lng) {
+function setLocation(lat, lng, ms = 1000) {
     pinLat = lat;
     pinLng = lng;
     renderPoints();
     globe.ringsData([{ lat, lng }]); // pulse only on live location
-    globe.pointOfView({ lat, lng, altitude: 2.5 }, 1000);
+    globe.pointOfView({ lat, lng, altitude: 2.5 }, ms);
 }
 
 // Track pin screen position and visibility each frame
