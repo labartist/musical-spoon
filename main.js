@@ -51,6 +51,35 @@ document.querySelectorAll('.dropdown').forEach(details => {
 const globeEl = document.getElementById('globe-container');
 const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';
 
+// ── Travel history (chronological 2026 journey) ───────
+const HOME = { name: 'Jakarta, Indonesia', lat: -6.2088, lng: 106.8456 };
+const TRAVEL = [
+    { name: 'Bali, Indonesia',      date: '15 Jan 2026', lat: -8.6500,  lng: 115.2167 },
+    { name: 'Tasmania, Australia',  date: '16 Mar 2026', lat: -42.8821, lng: 147.3272 },
+    { name: 'Melbourne, Australia', date: '21 Mar 2026', lat: -37.8136, lng: 144.9631 },
+    { name: 'Shanghai, China',      date: '16 Apr 2026', lat: 31.2304,  lng: 121.4737 },
+    { name: 'Rome, Italy',          date: '16 Apr 2026', lat: 41.9028,  lng: 12.4964 },
+    { name: 'Florence, Italy',      date: '18 Apr 2026', lat: 43.7696,  lng: 11.2558 },
+    { name: 'Milan, Italy',         date: '20 Apr 2026', lat: 45.4642,  lng: 9.1900 },
+    { name: 'Rome, Italy',          date: '24 Apr 2026', lat: 41.9028,  lng: 12.4964 },
+    { name: 'Naples, Florida, USA', date: '25 Apr 2026', lat: 26.1420,  lng: -81.7948 },
+];
+
+// Chronological arcs, starting from home base
+const TRAVEL_ARCS = [];
+let _prevStop = HOME;
+for (const stop of TRAVEL) {
+    TRAVEL_ARCS.push({ startLat: _prevStop.lat, startLng: _prevStop.lng, endLat: stop.lat, endLng: stop.lng });
+    _prevStop = stop;
+}
+
+// Deduplicate city markers by name (Rome appears twice)
+const TRAVEL_DOTS = [];
+const _seenCities = new Set();
+for (const stop of TRAVEL) {
+    if (!_seenCities.has(stop.name)) { _seenCities.add(stop.name); TRAVEL_DOTS.push(stop); }
+}
+
 function getGlobeSize() {
     return Math.min(globeEl.clientWidth, globeEl.clientHeight, 480);
 }
@@ -79,12 +108,19 @@ const globe = Globe()(globeEl)
     .labelColor(() => '#baa6d0')
     .labelResolution(6)
     .labelAltitude(0.001)
-    // Location pin — white, taller, with glow
+    // Location pins — live (white spike) + travel dots (periwinkle)
     .pointsData([])
-    .pointColor(() => '#ffffff')
-    .pointAltitude(0.14)
-    .pointRadius(0.05)
+    .pointColor(d => d.color || '#ffffff')
+    .pointAltitude(d => d.alt != null ? d.alt : 0.14)
+    .pointRadius(d => d.radius != null ? d.radius : 0.05)
     .pointsMerge(false)
+    // Travel arcs — chronological journey path
+    .arcsData(TRAVEL_ARCS)
+    .arcColor(() => ['rgba(169,184,232,0.1)', 'rgba(169,184,232,0.85)'])
+    .arcStroke(0.5)
+    .arcDashLength(0.4)
+    .arcDashGap(0.18)
+    .arcDashAnimateTime(2600)
     // 3D surface pulse rings — conform to globe curvature
     .ringsData([])
     .ringColor(() => t => `rgba(255,255,255,${0.8 * (1 - t)})`)
@@ -171,12 +207,22 @@ let pinLat = null, pinLng = null;
 // Fallback location + vitals until API responds
 setLocation(-6.2088, 106.8456); // fallback: Jakarta
 
+// Render travel city dots + the live location pin in one points layer
+function renderPoints() {
+    const pts = TRAVEL_DOTS.map(p => ({
+        lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.18, alt: 0.01
+    }));
+    if (pinLat !== null) {
+        pts.push({ lat: pinLat, lng: pinLng, color: '#ffffff', radius: 0.05, alt: 0.14 });
+    }
+    globe.pointsData(pts);
+}
+
 function setLocation(lat, lng) {
     pinLat = lat;
     pinLng = lng;
-    const point = [{ lat, lng }];
-    globe.pointsData(point);
-    globe.ringsData(point);
+    renderPoints();
+    globe.ringsData([{ lat, lng }]); // pulse only on live location
     globe.pointOfView({ lat, lng, altitude: 2.5 }, 1000);
 }
 
