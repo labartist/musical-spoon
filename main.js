@@ -135,7 +135,8 @@ mat.color.set('#0d0d18');
 mat.emissive = mat.color.clone();
 mat.emissiveIntensity = 0.1;
 
-globe.controls().autoRotate = true;
+// Auto-rotation is paused/resumed by setLocation (holds on a new location first)
+globe.controls().autoRotate = false;
 globe.controls().autoRotateSpeed = 0.3;
 globe.controls().enableZoom = false;
 
@@ -219,12 +220,22 @@ function renderPoints() {
     globe.pointsData(pts);
 }
 
+// Hold the globe still on a freshly-set location before auto-rotation resumes
+const ROTATE_HOLD_MS = 4000;
+let _rotateResumeTimer = null;
+
 function setLocation(lat, lng, ms = 1000) {
     pinLat = lat;
     pinLng = lng;
     renderPoints();
     globe.ringsData([{ lat, lng }]); // pulse only on live location
     globe.pointOfView({ lat, lng, altitude: 2.5 }, ms);
+    // Pause auto-rotation so the pin stays centered, then resume after a hold
+    globe.controls().autoRotate = false;
+    clearTimeout(_rotateResumeTimer);
+    _rotateResumeTimer = setTimeout(() => {
+        globe.controls().autoRotate = true;
+    }, ms + ROTATE_HOLD_MS);
 }
 
 // Track pin screen position and visibility each frame
