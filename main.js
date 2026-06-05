@@ -215,7 +215,10 @@ function renderPoints() {
         lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.18, alt: 0.01
     }));
     if (pinLat !== null) {
-        pts.push({ lat: pinLat, lng: pinLng, color: '#ffffff', radius: 0.05, alt: 0.14 });
+        // Sit on the surface (like the travel dots) so the pin stays glued to its
+        // location as the globe rotates — a high altitude makes it appear to float
+        // off into the ocean near the limb.
+        pts.push({ lat: pinLat, lng: pinLng, color: '#ffffff', radius: 0.12, alt: 0.01 });
     }
     globe.pointsData(pts);
 }
