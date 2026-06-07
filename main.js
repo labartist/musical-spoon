@@ -51,34 +51,43 @@ document.querySelectorAll('.dropdown').forEach(details => {
 const globeEl = document.getElementById('globe-container');
 const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';
 
-// ── Travel history (chronological 2026 journey) ───────
+// ── Travel history (2026, round-trips from the Jakarta hub) ───────
 const HOME = { name: 'Jakarta, Indonesia', lat: -6.2088, lng: 106.8456 };
-const TRAVEL = [
-    { name: 'Bali, Indonesia',      date: '15 Jan 2026', lat: -8.6500,  lng: 115.2167 },
-    { name: 'Tasmania, Australia',  date: '16 Mar 2026', lat: -42.8821, lng: 147.3272 },
-    { name: 'Melbourne, Australia', date: '21 Mar 2026', lat: -37.8136, lng: 144.9631 },
-    { name: 'Shanghai, China',      date: '16 Apr 2026', lat: 31.2304,  lng: 121.4737 },
-    { name: 'Rome, Italy',          date: '16 Apr 2026', lat: 41.9028,  lng: 12.4964 },
-    { name: 'Florence, Italy',      date: '18 Apr 2026', lat: 43.7696,  lng: 11.2558 },
-    { name: 'Milan, Italy',         date: '20 Apr 2026', lat: 45.4642,  lng: 9.1900 },
-    { name: 'Rome, Italy',          date: '24 Apr 2026', lat: 41.9028,  lng: 12.4964 },
-    { name: 'Naples, Florida, USA', date: '25 Apr 2026', lat: 26.1420,  lng: -81.7948 },
+
+// Places visited (deduped), with coords and the date(s) there
+const PLACES = {
+    Bali:      { name: 'Bali, Indonesia',      date: '15 Jan 2026',      lat: -8.4095,  lng: 115.1889 },
+    Tasmania:  { name: 'Tasmania, Australia',  date: '16 Mar 2026',      lat: -42.8821, lng: 147.3272 },
+    Melbourne: { name: 'Melbourne, Australia', date: '21 Mar 2026',      lat: -37.8136, lng: 144.9631 },
+    Shanghai:  { name: 'Shanghai, China',      date: '16 Apr 2026',      lat: 31.2304,  lng: 121.4737 },
+    Rome:      { name: 'Rome, Italy',          date: '16 & 24 Apr 2026', lat: 41.9028,  lng: 12.4964 },
+    Florence:  { name: 'Florence, Italy',      date: '18 Apr 2026',      lat: 43.7696,  lng: 11.2558 },
+    Milan:     { name: 'Milan, Italy',         date: '20 Apr 2026',      lat: 45.4642,  lng: 9.1900 },
+    Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
+};
+
+// Chronological journey as round-trips out of Jakarta (each trip returns home)
+const JOURNEY = [
+    HOME, PLACES.Bali, HOME,                                   // Jan: Bali return
+    PLACES.Tasmania, PLACES.Melbourne, HOME,                   // Mar: Tasmania → Melbourne → home
+    PLACES.Shanghai, PLACES.Rome, PLACES.Florence,             // Apr: Shanghai → Italy …
+    PLACES.Milan, PLACES.Rome, PLACES.Naples, PLACES.Rome, HOME, // … → Florida → Rome → home
 ];
 
-// Chronological arcs, starting from home base
+// Build arcs from consecutive legs, deduped undirected (out-and-back drawn once)
 const TRAVEL_ARCS = [];
-let _prevStop = HOME;
-for (const stop of TRAVEL) {
-    TRAVEL_ARCS.push({ startLat: _prevStop.lat, startLng: _prevStop.lng, endLat: stop.lat, endLng: stop.lng });
-    _prevStop = stop;
+const _seenLegs = new Set();
+for (let i = 0; i < JOURNEY.length - 1; i++) {
+    const a = JOURNEY[i], b = JOURNEY[i + 1];
+    if (a === b) continue; // skip any zero-length leg
+    const key = [`${a.lat},${a.lng}`, `${b.lat},${b.lng}`].sort().join('|');
+    if (_seenLegs.has(key)) continue;
+    _seenLegs.add(key);
+    TRAVEL_ARCS.push({ startLat: a.lat, startLng: a.lng, endLat: b.lat, endLng: b.lng });
 }
 
-// Deduplicate city markers by name (Rome appears twice)
-const TRAVEL_DOTS = [];
-const _seenCities = new Set();
-for (const stop of TRAVEL) {
-    if (!_seenCities.has(stop.name)) { _seenCities.add(stop.name); TRAVEL_DOTS.push(stop); }
-}
+// City markers = the deduped destinations (Jakarta itself is the live pin)
+const TRAVEL_DOTS = Object.values(PLACES);
 
 function getGlobeSize() {
     return Math.min(globeEl.clientWidth, globeEl.clientHeight, 480);
