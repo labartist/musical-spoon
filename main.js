@@ -123,13 +123,22 @@ const globe = Globe()(globeEl)
     .pointAltitude(d => d.alt != null ? d.alt : 0.14)
     .pointRadius(d => d.radius != null ? d.radius : 0.05)
     .pointsMerge(false)
+    // Hover tooltip — where I was + when (live pin shows "You are here")
+    .pointLabel(d => {
+        if (d.kind === 'live') {
+            return `<div class="globe-tip"><span class="globe-tip-name">${currentCity}</span><span class="globe-tip-sub">Current location</span></div>`;
+        }
+        return `<div class="globe-tip"><span class="globe-tip-name">${d.name}</span><span class="globe-tip-sub">${d.date}</span></div>`;
+    })
     // Travel arcs — chronological journey path
     .arcsData(TRAVEL_ARCS)
-    .arcColor(() => ['rgba(169,184,232,0.1)', 'rgba(169,184,232,0.85)'])
-    .arcStroke(0.5)
-    .arcDashLength(0.4)
-    .arcDashGap(0.18)
-    .arcDashAnimateTime(2600)
+    .arcCurveResolution(128)
+    .arcColor(() => ['rgba(169,184,232,0.25)', 'rgba(169,184,232,0.9)'])
+    .arcStroke(0.45)
+    .arcDashLength(0.6)
+    .arcDashGap(0.25)
+    .arcDashInitialGap(() => Math.random())
+    .arcDashAnimateTime(3800)
     // 3D surface pulse rings — conform to globe curvature
     .ringsData([])
     .ringColor(() => t => `rgba(255,255,255,${0.8 * (1 - t)})`)
@@ -145,8 +154,38 @@ mat.emissive = mat.color.clone();
 mat.emissiveIntensity = 0.1;
 
 globe.controls().autoRotate = true;
-globe.controls().autoRotateSpeed = 0.3;
+globe.controls().autoRotateSpeed = 0;   // managed by updateAutoSpin()
 globe.controls().enableZoom = false;
+
+// ── Auto-spin control ─────────────────────────────────
+// Pause while the user is interacting (dragging or hovering the globe);
+// resume after 3s of stillness, ramping the speed up gradually.
+const AUTO_SPIN_SPEED = 0.3;
+const RESUME_DELAY_MS = 3000;
+const SPIN_RAMP_STEP = 0.01; // per-frame speed increase → quick but smooth acceleration
+let spinDragging = false;
+let spinHovering = false;
+let lastInteractionAt = performance.now() - RESUME_DELAY_MS; // spin up right away on load
+
+globe.controls().addEventListener('start', () => { spinDragging = true; });
+globe.controls().addEventListener('end', () => { spinDragging = false; lastInteractionAt = performance.now(); });
+globeEl.addEventListener('mouseenter', () => { spinHovering = true; });
+globeEl.addEventListener('mouseleave', () => { spinHovering = false; lastInteractionAt = performance.now(); });
+
+function updateAutoSpin() {
+    const ctrl = globe.controls();
+    if (spinDragging || spinHovering) {
+        // Actively engaging the globe — stop immediately and hold
+        lastInteractionAt = performance.now();
+        ctrl.autoRotateSpeed = 0;
+    } else if (performance.now() - lastInteractionAt > RESUME_DELAY_MS) {
+        // Idle long enough — ease the spin back up to full speed
+        ctrl.autoRotateSpeed = Math.min(AUTO_SPIN_SPEED, ctrl.autoRotateSpeed + SPIN_RAMP_STEP);
+    } else {
+        // Within the idle grace window — stay stopped
+        ctrl.autoRotateSpeed = 0;
+    }
+}
 
 // Point-in-polygon test (ray casting)
 function pointInPolygon(lat, lng, polygon) {
@@ -217,12 +256,17 @@ let pinLat = null, pinLng = null;
 setLocation(-6.2088, 106.8456); // fallback: Jakarta
 
 // Render travel city dots + the live location pin in one points layer
+// Travel dots use a roomy radius so they're easy to hover (hit area = dot size)
 function renderPoints() {
     const pts = TRAVEL_DOTS.map(p => ({
-        lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.18, alt: 0.01
+        lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.5, alt: 0.01,
+        name: p.name, date: p.date, kind: 'travel'
     }));
     if (pinLat !== null) {
-        pts.push({ lat: pinLat, lng: pinLng, color: '#ffffff', radius: 0.05, alt: 0.14 });
+        // Large invisible hit target so the tiny beacon is easy to hover
+        pts.push({ lat: pinLat, lng: pinLng, color: 'rgba(0,0,0,0)', radius: 0.5, alt: 0.01, kind: 'live' });
+        // Visible glowing beacon
+        pts.push({ lat: pinLat, lng: pinLng, color: '#ffffff', radius: 0.05, alt: 0.14, kind: 'live' });
     }
     globe.pointsData(pts);
 }
@@ -242,6 +286,7 @@ let currentScale = 1.0;
 const LERP_SPEED = 0.9; // lower = smoother/slower transition
 
 (function trackPin() {
+    updateAutoSpin();
     if (pinLat !== null) {
         const coords = globe.getScreenCoords(pinLat, pinLng);
         if (coords) {
@@ -339,6 +384,7 @@ const WMO_CODES = {
 };
 
 let locationTimezone = null;
+let currentCity = 'Jakarta'; // shown in the live-pin hover tooltip
 
 function fetchWeather(lat, lng) {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=auto`;
@@ -357,6 +403,7 @@ function fetchWeather(lat, lng) {
             locationTimezone = data.timezone;
             // Show city from timezone (e.g. "Asia/Jakarta" → "Jakarta")
             const city = data.timezone.split('/').pop().replace(/_/g, ' ');
+            currentCity = city;
             document.getElementById('location-label').textContent = `Local Time — ${city}`;
         })
         .catch(() => {});

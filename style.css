@@ -433,6 +433,42 @@ summary.dropdown-toggle::marker {
     z-index: 1;
 }
 
+/* Globe hover tooltip (city + date) — strip globe.gl's default wrapper box */
+.float-tooltip-kap {
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.globe-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(8, 8, 12, 0.92);
+    border: 1px solid #26262e;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.globe-tip-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ececf0;
+    letter-spacing: 0.01em;
+}
+
+.globe-tip-sub {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: #8a8a95;
+    letter-spacing: 0.02em;
+}
+
 /* Fade-in animations */
 .fade-in {
     opacity: 0;
