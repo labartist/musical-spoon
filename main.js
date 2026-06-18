@@ -47,6 +47,81 @@ document.querySelectorAll('.dropdown').forEach(details => {
     });
 });
 
+// ── Carousel drag-to-scroll ──────────────────────────
+// Click-drag the showcase track to scroll it; a real drag suppresses the
+// card link click so dragging never opens a product page.
+(() => {
+    const track = document.querySelector('.showcase-track');
+    if (!track) return;
+
+    const DRAG_THRESHOLD = 6; // px of movement before it counts as a drag
+    let isDown = false;
+    let didDrag = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    // Cards are <a> links — block the browser's native link/image drag
+    // (it shows a URL ghost overlay and hijacks the gesture)
+    track.addEventListener('dragstart', e => e.preventDefault());
+
+    track.addEventListener('mousedown', e => {
+        isDown = true;
+        didDrag = false;
+        startX = e.pageX;
+        startScrollLeft = track.scrollLeft;
+        // Snap fights the cursor mid-drag — disable until release
+        track.style.scrollSnapType = 'none';
+        track.classList.add('dragging');
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!isDown) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > DRAG_THRESHOLD) didDrag = true;
+        if (didDrag) {
+            e.preventDefault();
+            track.scrollLeft = startScrollLeft - dx;
+        }
+    });
+
+    // Ease to the nearest card instead of letting snap jump instantly.
+    // scrollIntoView(inline:'start') reuses the browser's own snap geometry,
+    // so the smooth landing matches the native snap point (no post-jerk).
+    function snapToNearest() {
+        const cards = [...track.querySelectorAll('.showcase-card')];
+        if (!cards.length) return;
+        const trackLeft = track.getBoundingClientRect().left;
+        let best = cards[0], bestDist = Infinity;
+        for (const card of cards) {
+            const dist = Math.abs(card.getBoundingClientRect().left - trackLeft);
+            if (dist < bestDist) { bestDist = dist; best = card; }
+        }
+        best.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    }
+
+    window.addEventListener('mouseup', () => {
+        if (!isDown) return;
+        isDown = false;
+        track.classList.remove('dragging');
+        if (didDrag) {
+            snapToNearest();
+            // restore native snapping once the smooth glide has settled
+            setTimeout(() => { track.style.scrollSnapType = ''; }, 450);
+        } else {
+            track.style.scrollSnapType = '';
+        }
+    });
+
+    // Swallow the click that follows a drag so card links don't fire
+    track.addEventListener('click', e => {
+        if (didDrag) {
+            e.preventDefault();
+            e.stopPropagation();
+            didDrag = false;
+        }
+    }, true);
+})();
+
 // ── Globe ──────────────────────────────────────────────
 const globeEl = document.getElementById('globe-container');
 const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';

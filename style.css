@@ -330,6 +330,18 @@ summary.dropdown-toggle::marker {
     -webkit-overflow-scrolling: touch;
     padding: 0 1rem 1rem;
     scrollbar-width: none;
+    cursor: grab;
+    user-select: none;
+}
+
+.showcase-track.dragging {
+    cursor: grabbing;
+}
+
+.showcase-track img,
+.showcase-card {
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 .showcase-track::-webkit-scrollbar {
