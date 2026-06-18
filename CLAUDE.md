@@ -22,8 +22,8 @@ globe, and a Parklane product showcase.
 | `index.html` | Single page: hero, globe, time/weather, Daily Vitals dropdown, Parklane Collections dropdown, footer |
 | `style.css` | All styling. Dark theme: bg `#08080c`, text `#ececf0`, muted `#444`/`#666` |
 | `main.js` | Globe + travel trail, vitals/weather/time fetch, dropdown animations, carousel drag-to-scroll |
-| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s), writes `vitals` to KV |
-| `api/data.js` | `GET /api/data` — reads `vitals` from KV (60s cache) |
+| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals` + upserts a daily `vitals_history` snapshot (last 14 days) to KV |
+| `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` (60s cache), returns `{...vitals, history}` |
 | `package.json` | Only dep: `@vercel/kv` |
 | `og-image.png` | 1200×630 social share card (generated, dark themed) |
 
@@ -31,11 +31,16 @@ globe, and a Parklane product showcase.
 
 1. **iOS Shortcut** (on Gary's phone) reads Apple Health (steps, distance,
    calories) + GPS, `POST`s JSON to `/api/update` with `Authorization: Bearer <AUTH_KEY>`.
-2. `update.js` validates auth + rate limit, stores a single `vitals` object in KV.
+2. `update.js` validates auth + rate limit, stores the latest `vitals` object,
+   and upserts today's entry into `vitals_history` (one row per Jakarta day,
+   capped to the last 14) in KV.
 3. Browser `GET`s `/api/data` on load and every 5 min; falls back to demo
-   values when the API 404s (e.g. local dev).
+   values when the API 404s (e.g. local dev). Response includes `history`.
 4. `lat/lng` from the response repositions the globe pin and triggers the
    Open-Meteo weather/timezone fetch.
+
+**KV keys:** `vitals` (latest snapshot), `vitals_history` (array of daily
+snapshots), `last_update_time` (rate-limit guard).
 
 **Env vars (Vercel):** `AUTH_KEY` (shared secret with the iOS Shortcut) + the
 `KV_*` connection vars (auto-injected by the Vercel KV integration).
@@ -80,8 +85,11 @@ the port number in `launch.json` and restart the preview to force a fresh load.
 
 ## Roadmap / parked ideas
 
-- **KV history** — append each ping to a list (cap last 10) instead of
-  overwriting; makes the trail self-updating and unlocks sparklines.
-- **About / Projects section** — the portfolio still has no bio/work content.
-- **Activity sparklines** — 7-day trends under the vitals (needs KV history).
+- **Activity sparklines** — 7-day trends under the vitals. Data plumbing is
+  DONE (`vitals_history`); needs a few days banked + the front-end charts.
+- **About / Projects section** — the portfolio still has no bio/work content
+  (waiting on Gary's bio + project list).
+- **Location auto-tracking** — append each ping to a location history (cap last
+  10 stops, dedupe by city) so the travel trail self-updates instead of staying
+  hardcoded. The thornier half of the KV work — not started.
 - **Guided-replay comet** — animate the journey in chronological order.
