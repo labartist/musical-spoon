@@ -427,6 +427,110 @@ function setVitals({ steps, distance, calories }) {
     document.getElementById('calories').textContent = Math.round(calories).toLocaleString();
 }
 
+// ── Weekly trend chart (steps / distance / calories combined) ─────────
+const TREND_W = 260, TREND_H = 44, TREND_PAD = 4;
+const TREND_METRICS = [
+    { key: 'steps',    label: 'Steps',    color: '#8f9ed0' },
+    { key: 'distance', label: 'Distance', color: '#73a596' },
+    { key: 'calories', label: 'Calories', color: '#bf94a0' },
+];
+
+// Raw-value formatting for the hover tooltip
+const TREND_FMT = {
+    steps: v => v.toLocaleString() + ' steps',
+    distance: v => v.toFixed(1) + ' km',
+    calories: v => Math.round(v).toLocaleString() + ' cal',
+};
+
+function fmtTrendDate(d) {
+    if (!d) return '';
+    const dt = new Date(d + 'T00:00:00');
+    return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+}
+
+// One subtle chart: each metric normalized to its own range, overlaid (they move
+// together, so it reads as a single weekly trend). Hover a day → guide + tooltip.
+function renderTrend(history) {
+    const el = document.getElementById('vitals-trend');
+    if (!el) return;
+    const recent = Array.isArray(history) ? history.slice(-7) : [];
+    if (recent.length < 2) { el.innerHTML = ''; el.style.display = 'none'; return; }
+
+    const n = recent.length;
+    const xOf = i => TREND_PAD + (i / (n - 1)) * (TREND_W - TREND_PAD * 2);
+    const series = TREND_METRICS.map(({ key, color }) => {
+        const vals = recent.map(h => Number(h[key]) || 0);
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const range = (max - min) || 1;
+        const ys = vals.map(v => TREND_H - TREND_PAD - ((v - min) / range) * (TREND_H - TREND_PAD * 2));
+        return { key, color, ys };
+    });
+
+    const lines = series.map(s =>
+        `<polyline points="${s.ys.map((y, i) => `${xOf(i).toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="1.25" stroke-opacity="0.55" stroke-linecap="round" stroke-linejoin="round"/>`
+    ).join('');
+    const guide = `<line class="trend-guide" y1="${TREND_PAD}" y2="${TREND_H - TREND_PAD}" stroke="#666" stroke-width="0.6" stroke-dasharray="2 2" opacity="0"/>`;
+    const dots = series.map(s => `<circle class="trend-hi" r="2.2" fill="${s.color}" opacity="0"/>`).join('');
+    const hit = `<rect x="0" y="0" width="${TREND_W}" height="${TREND_H}" fill="transparent" pointer-events="all"/>`;
+    const svg = `<svg class="trend-svg" viewBox="0 0 ${TREND_W} ${TREND_H}" xmlns="http://www.w3.org/2000/svg">${hit}${guide}${lines}${dots}</svg>`;
+    const legend = TREND_METRICS.map(({ label, color }) =>
+        `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
+
+    el.innerHTML = `<span class="trend-label">Past 7 days</span>${svg}<div class="trend-legend">${legend}</div>`;
+    el.style.display = 'flex';
+
+    // ── hover interaction ──
+    const svgEl = el.querySelector('.trend-svg');
+    const guideEl = el.querySelector('.trend-guide');
+    const dotEls = [...el.querySelectorAll('.trend-hi')];
+    // Tooltip lives on <body> so position:fixed is viewport-relative (the dropdown's
+    // fade-in transform would otherwise re-anchor it and the overflow clip would hide it)
+    let tip = document.querySelector('body > .trend-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'trend-tip'; document.body.appendChild(tip); }
+
+    function showAt(i) {
+        const x = xOf(i);
+        guideEl.setAttribute('x1', x); guideEl.setAttribute('x2', x); guideEl.setAttribute('opacity', '1');
+        series.forEach((s, k) => { dotEls[k].setAttribute('cx', x); dotEls[k].setAttribute('cy', s.ys[i]); dotEls[k].setAttribute('opacity', '1'); });
+        const h = recent[i];
+        tip.innerHTML = `<span class="trend-tip-date">${fmtTrendDate(h.date)}</span>`
+            + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
+        const sRect = svgEl.getBoundingClientRect();
+        tip.style.left = (sRect.left + (x / TREND_W) * sRect.width) + 'px';
+        tip.style.top = sRect.top + 'px';
+        tip.classList.add('show');
+    }
+    function hide() {
+        guideEl.setAttribute('opacity', '0');
+        dotEls.forEach(d => d.setAttribute('opacity', '0'));
+        tip.classList.remove('show');
+    }
+
+    svgEl.addEventListener('mousemove', e => {
+        const r = svgEl.getBoundingClientRect();
+        const vx = ((e.clientX - r.left) / r.width) * TREND_W;
+        let bi = 0, bd = Infinity;
+        for (let i = 0; i < n; i++) { const d = Math.abs(xOf(i) - vx); if (d < bd) { bd = d; bi = i; } }
+        showAt(bi);
+    });
+    svgEl.addEventListener('mouseleave', hide);
+}
+
+// Sample history so the trend chart renders in local/demo mode (dates = last 7 days)
+const DEMO_HISTORY = [
+    { steps: 5200,  distance: 3.9, calories: 240 },
+    { steps: 9100,  distance: 6.8, calories: 380 },
+    { steps: 7400,  distance: 5.2, calories: 310 },
+    { steps: 11200, distance: 8.1, calories: 450 },
+    { steps: 6800,  distance: 4.7, calories: 295 },
+    { steps: 8900,  distance: 6.5, calories: 360 },
+    { steps: 8432,  distance: 6.2, calories: 340 },
+].map((e, i, arr) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (arr.length - 1 - i));
+    return { ...e, date: d.toISOString().slice(0, 10) };
+});
+
 // Fetch live data from Vercel API, fall back to demo values
 fetch(VITALS_API)
     .then(r => r.ok ? r.json() : Promise.reject())
@@ -436,6 +540,7 @@ fetch(VITALS_API)
             distance: data.distance,
             calories: data.calories,
         });
+        renderTrend(data.history);
         // Update globe to owner's real location + fetch weather
         if (data.lat && data.lng) {
             setLocation(data.lat, data.lng);
@@ -445,6 +550,7 @@ fetch(VITALS_API)
     .catch(() => {
         // API not set up yet — show demo values
         setVitals({ steps: 8432, distance: 6.2, calories: 340 });
+        renderTrend(DEMO_HISTORY);
         fetchWeather(-6.2088, 106.8456); // fallback: Jakarta
         document.getElementById('location-label').textContent = 'Local Time — Jakarta';
     });
@@ -510,6 +616,7 @@ setInterval(() => {
                 distance: data.distance,
                 calories: data.calories,
             });
+            renderTrend(data.history);
             if (data.lat && data.lng) {
                 setLocation(data.lat, data.lng);
                 fetchWeather(data.lat, data.lng);
