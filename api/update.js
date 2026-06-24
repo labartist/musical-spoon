@@ -1,5 +1,13 @@
 import { kv } from '@vercel/kv';
 
+// Great-circle distance in km — used to de-dupe location pings into real "stops"
+function haversineKm(la1, lo1, la2, lo2) {
+	const R = 6371, r = d => d * Math.PI / 180;
+	const dLa = r(la2 - la1), dLo = r(lo2 - lo1);
+	const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(dLo / 2) ** 2;
+	return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 export default async function handler(req, res) {
 	// CORS headers
 	res.setHeader('Access-Control-Allow-Origin', '*');
@@ -57,7 +65,24 @@ export default async function handler(req, res) {
 			// history is non-critical; ignore failures
 		}
 
-		return res.status(200).json({ ok: true, data });
+		// Location history — append only meaningfully-new stops (distance-deduped,
+			// so daily movement around home never spams the trail). Best-effort.
+			try {
+				if (data.lat && data.lng) {
+					const STOP_KM = 80; // a ping must be >80km from the last stop to count as new
+					let locs = (await kv.get('location_history')) || [];
+					const last = locs[locs.length - 1];
+					if (!last || haversineKm(last.lat, last.lng, data.lat, data.lng) > STOP_KM) {
+						locs.push({ lat: data.lat, lng: data.lng, t: now });
+						locs = locs.slice(-10); // keep the last 10 stops
+						await kv.set('location_history', locs);
+					}
+				}
+			} catch (e) {
+				// non-critical; ignore
+			}
+
+			return res.status(200).json({ ok: true, data });
 	} catch (e) {
 		return res.status(400).json({ error: 'Invalid data' });
 	}

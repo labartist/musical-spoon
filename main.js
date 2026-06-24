@@ -149,20 +149,32 @@ const JOURNEY = [
     PLACES.Milan, PLACES.Rome, PLACES.Naples, PLACES.Rome, HOME, // … → Florida → Rome → home
 ];
 
-// Build arcs from consecutive legs, deduped undirected (out-and-back drawn once)
-const TRAVEL_ARCS = [];
-const _seenLegs = new Set();
-for (let i = 0; i < JOURNEY.length - 1; i++) {
-    const a = JOURNEY[i], b = JOURNEY[i + 1];
-    if (a === b) continue; // skip any zero-length leg
-    const key = [`${a.lat},${a.lng}`, `${b.lat},${b.lng}`].sort().join('|');
-    if (_seenLegs.has(key)) continue;
-    _seenLegs.add(key);
-    TRAVEL_ARCS.push({ startLat: a.lat, startLng: a.lng, endLat: b.lat, endLng: b.lng });
+// Build arcs from an ordered waypoint list, deduped undirected (out-and-back drawn once)
+function buildArcs(waypoints) {
+    const arcs = [], seen = new Set();
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const a = waypoints[i], b = waypoints[i + 1];
+        if (a.lat === b.lat && a.lng === b.lng) continue; // skip zero-length leg
+        const key = [`${a.lat},${a.lng}`, `${b.lat},${b.lng}`].sort().join('|');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        arcs.push({ startLat: a.lat, startLng: a.lng, endLat: b.lat, endLng: b.lng });
+    }
+    return arcs;
 }
+const TRAVEL_ARCS = buildArcs(JOURNEY);
 
-// City markers = the deduped destinations (Jakarta itself is the live pin)
+// City markers = curated base destinations (Jakarta = the live pin) + auto-tracked stops
 const TRAVEL_DOTS = Object.values(PLACES);
+let autoStops = []; // appended from location_history (future travel)
+
+// Great-circle km between two coords — client-side de-dupe of auto stops
+function kmBetween(la1, lo1, la2, lo2) {
+    const R = 6371, r = d => d * Math.PI / 180;
+    const dLa = r(la2 - la1), dLo = r(lo2 - lo1);
+    const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(dLo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+}
 
 function getGlobeSize() {
     return Math.min(globeEl.clientWidth, globeEl.clientHeight, 480);
@@ -333,7 +345,7 @@ setLocation(-6.2088, 106.8456); // fallback: Jakarta
 // Render travel city dots + the live location pin in one points layer
 // Travel dots use a roomy radius so they're easy to hover (hit area = dot size)
 function renderPoints() {
-    const pts = TRAVEL_DOTS.map(p => ({
+    const pts = [...TRAVEL_DOTS, ...autoStops].map(p => ({
         lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.5, alt: 0.01,
         name: p.name, date: p.date, kind: 'travel'
     }));
@@ -352,6 +364,43 @@ function setLocation(lat, lng) {
     renderPoints();
     globe.ringsData([{ lat, lng }]); // pulse only on live location
     globe.pointOfView({ lat, lng, altitude: 2.5 }, 1000);
+}
+
+// ── Auto-tracked travel (location_history) ────────────
+// Reverse-geocode a coord → "City, Country" (free, no key), cached
+const _geoCache = {};
+async function reverseGeocode(lat, lng) {
+    const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+    if (_geoCache[key]) return _geoCache[key];
+    try {
+        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+        const d = await r.json();
+        const city = d.city || d.locality || d.principalSubdivision || '';
+        const name = city ? `${city}, ${d.countryName}` : (d.countryName || key);
+        _geoCache[key] = name;
+        return name;
+    } catch (e) {
+        return key;
+    }
+}
+
+// Merge KV location history onto the curated base: new stops become dots + arcs.
+// Skips pings near home (the live pin) and de-dupes by proximity (~60km).
+async function applyLocations(locations) {
+    if (!Array.isArray(locations) || !locations.length) return;
+    const dots = [];
+    for (const loc of locations) {
+        if (kmBetween(loc.lat, loc.lng, HOME.lat, HOME.lng) < 60) continue; // home → live pin
+        if ([...TRAVEL_DOTS, ...dots].some(p => kmBetween(loc.lat, loc.lng, p.lat, p.lng) < 60)) continue; // dup
+        const name = await reverseGeocode(loc.lat, loc.lng);
+        const date = new Date(loc.t).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        dots.push({ name, date, lat: loc.lat, lng: loc.lng });
+    }
+    autoStops = dots;
+    renderPoints();
+    // Extend the journey arcs through the raw stops (returns home included)
+    const tail = locations.map(l => ({ lat: l.lat, lng: l.lng }));
+    globe.arcsData(buildArcs([...JOURNEY, ...tail]));
 }
 
 // Track pin screen position and visibility each frame
@@ -531,6 +580,15 @@ const DEMO_HISTORY = [
     return { ...e, date: d.toISOString().slice(0, 10) };
 });
 
+// Sample auto-tracked stops so the append is visible in local/demo mode.
+// Realistic: each trip returns to Jakarta (just like real pings record it).
+const DEMO_LOCATIONS = [
+    { lat: 1.3521,  lng: 103.8198, t: Date.now() - 12 * 864e5 }, // Singapore
+    { lat: -6.2088, lng: 106.8456, t: Date.now() - 10 * 864e5 }, // ← home to Jakarta
+    { lat: 35.6762, lng: 139.6503, t: Date.now() -  4 * 864e5 }, // Tokyo
+    { lat: -6.2088, lng: 106.8456, t: Date.now() -  2 * 864e5 }, // ← home to Jakarta
+];
+
 // Fetch live data from Vercel API, fall back to demo values
 fetch(VITALS_API)
     .then(r => r.ok ? r.json() : Promise.reject())
@@ -541,6 +599,7 @@ fetch(VITALS_API)
             calories: data.calories,
         });
         renderTrend(data.history);
+        applyLocations(data.locations);
         // Update globe to owner's real location + fetch weather
         if (data.lat && data.lng) {
             setLocation(data.lat, data.lng);
@@ -551,6 +610,7 @@ fetch(VITALS_API)
         // API not set up yet — show demo values
         setVitals({ steps: 8432, distance: 6.2, calories: 340 });
         renderTrend(DEMO_HISTORY);
+        applyLocations(DEMO_LOCATIONS);
         fetchWeather(-6.2088, 106.8456); // fallback: Jakarta
         document.getElementById('location-label').textContent = 'Local Time — Jakarta';
     });
@@ -617,6 +677,7 @@ setInterval(() => {
                 calories: data.calories,
             });
             renderTrend(data.history);
+            applyLocations(data.locations);
             if (data.lat && data.lng) {
                 setLocation(data.lat, data.lng);
                 fetchWeather(data.lat, data.lng);
