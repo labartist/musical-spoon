@@ -461,6 +461,175 @@ const LERP_SPEED = 0.9; // lower = smoother/slower transition
     requestAnimationFrame(trackPin);
 })();
 
+// ── Guided-replay comet ───────────────────────────────
+// A glowing marker flies the journey in chronological order, riding the arcs.
+let REPLAY_MODE = 'continuous'; // 'continuous' | 'once' | 'off'
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    REPLAY_MODE = 'off'; // respect reduced-motion
+}
+const COMET_LEG_BASE_MS = 1400; // min time per leg
+const COMET_LEG_DIST_MS = 2600; // extra time scaled by leg length
+const COMET_HOLD_MS = 300;      // brief beat on arrival at each city
+const COMET_LABEL_MS = 1300;    // how long the arrival label lingers
+
+// Ordered legs straight from the journey (keeps returns; not deduped)
+const COMET_LEGS = [];
+for (let i = 0; i < JOURNEY.length - 1; i++) {
+    if (JOURNEY[i] !== JOURNEY[i + 1]) COMET_LEGS.push([JOURNEY[i], JOURNEY[i + 1]]);
+}
+
+// Geo ↔ unit vector + great-circle slerp (so the comet follows the arc's curve)
+const _toVec = (lat, lng) => {
+    const a = lat * Math.PI / 180, b = lng * Math.PI / 180;
+    return [Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a)];
+};
+const _toLatLng = v => [Math.asin(v[2]) * 180 / Math.PI, Math.atan2(v[1], v[0]) * 180 / Math.PI];
+
+const ARC_ALT_SCALE = 0.28; // tuned so the Bézier peak matches globe.gl's rendered arc altitude
+
+// lat/lng/alt → 3D point (sphere radius 1, +alt above surface)
+function _cart(lat, lng, alt) {
+    const u = _toVec(lat, lng), r = 1 + alt;
+    return [u[0] * r, u[1] * r, u[2] * r];
+}
+
+// Each leg as a 3D cubic Bézier — the SAME construction globe.gl uses for arcs
+// (control points at the great-circle quarter-points, lifted to altitude×1.5),
+// so the comet rides exactly on the drawn arc.
+const COMET_PATH = COMET_LEGS.map(([a, b]) => {
+    const va = _toVec(a.lat, a.lng), vb = _toVec(b.lat, b.lng);
+    const omega = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+    const so = Math.sin(omega) || 1;
+    const gc = f => {
+        const f1 = Math.sin((1 - f) * omega) / so, f2 = Math.sin(f * omega) / so;
+        return _toLatLng([f1 * va[0] + f2 * vb[0], f1 * va[1] + f2 * vb[1], f1 * va[2] + f2 * vb[2]]);
+    };
+    const A = ARC_ALT_SCALE * 2 * Math.sin(omega / 2); // auto-altitude basis (chord)
+    const m1 = gc(0.25), m2 = gc(0.75);
+    return {
+        a, b, omega,
+        dur: COMET_LEG_BASE_MS + (omega / Math.PI) * COMET_LEG_DIST_MS,
+        P0: _cart(a.lat, a.lng, 0),
+        P1: _cart(m1[0], m1[1], A * 1.5),
+        P2: _cart(m2[0], m2[1], A * 1.5),
+        P3: _cart(b.lat, b.lng, 0),
+    };
+});
+
+// Comet, trail, and arrival label DOM (positioned each frame via getScreenCoords)
+const COMET_TRAIL = 28;      // number of trailing dots (dense → reads as a streak)
+const COMET_TRAIL_STEP = 2;  // frames between trail samples (longer tail)
+const comet = document.createElement('div');
+comet.className = 'replay-comet';
+globeWrapper.appendChild(comet);
+const trailEls = [];
+for (let i = 0; i < COMET_TRAIL; i++) {
+    const el = document.createElement('div');
+    el.className = 'replay-trail';
+    globeWrapper.appendChild(el);
+    trailEls.push(el);
+}
+const cometLabel = document.createElement('div');
+cometLabel.className = 'replay-label';
+globeWrapper.appendChild(cometLabel);
+
+// Angular distance from the current view centre → used to hide things behind the globe
+function viewAngle(lat, lng) {
+    const pov = globe.pointOfView();
+    const r = d => d * Math.PI / 180;
+    const dLat = r(lat - pov.lat), dLng = r(lng - pov.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(pov.lat)) * Math.cos(r(lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+let legIdx = 0, legT = 0, holdT = 0, replayDone = false;
+let labelCity = null, labelUntil = 0;
+let cometPrev = performance.now();
+const posHistory = []; // recent comet {lat,lng,alt} for the trail
+
+function hideComet() {
+    comet.style.opacity = 0;
+    trailEls.forEach(el => el.style.opacity = 0);
+}
+
+(function animateComet(now) {
+    requestAnimationFrame(animateComet);
+    const dt = Math.min(now - cometPrev, 64); // clamp so a throttled tab doesn't make it leap
+    cometPrev = now;
+    if (REPLAY_MODE === 'off' || !COMET_PATH.length || replayDone) { hideComet(); return; }
+
+    // Keep flying during interaction — getScreenCoords already tracks the rotation
+    if (holdT > 0) {
+        holdT -= dt;
+    } else {
+        legT += dt / COMET_PATH[legIdx].dur;
+        if (legT >= 1) {
+            legT = 0;
+            holdT = COMET_HOLD_MS;
+            const arrived = COMET_PATH[legIdx].b;
+            if (arrived !== HOME) { labelCity = arrived; labelUntil = now + COMET_LABEL_MS; } // skip Jakarta returns
+            legIdx++;
+            if (legIdx >= COMET_PATH.length) {
+                if (REPLAY_MODE === 'once') { replayDone = true; hideComet(); return; }
+                legIdx = 0;
+            }
+        }
+    }
+
+    // Comet position along the current leg — evaluate the cubic Bézier (rides the arc)
+    const leg = COMET_PATH[legIdx];
+    const t = legT, u = 1 - t;
+    const w0 = u * u * u, w1 = 3 * u * u * t, w2 = 3 * u * t * t, w3 = t * t * t;
+    const Bx = w0 * leg.P0[0] + w1 * leg.P1[0] + w2 * leg.P2[0] + w3 * leg.P3[0];
+    const By = w0 * leg.P0[1] + w1 * leg.P1[1] + w2 * leg.P2[1] + w3 * leg.P3[1];
+    const Bz = w0 * leg.P0[2] + w1 * leg.P1[2] + w2 * leg.P2[2] + w3 * leg.P3[2];
+    const rr = Math.hypot(Bx, By, Bz);
+    const lat = Math.asin(Bz / rr) * 180 / Math.PI;
+    const lng = Math.atan2(By, Bx) * 180 / Math.PI;
+    const alt = rr - 1;
+
+    posHistory.unshift({ lat, lng, alt });
+    if (posHistory.length > COMET_TRAIL * COMET_TRAIL_STEP + 2) posHistory.pop();
+
+    const c = globe.getScreenCoords(lat, lng, alt);
+    if (c) {
+        comet.style.left = `${c.x}px`;
+        comet.style.top = `${c.y}px`;
+        comet.style.opacity = viewAngle(lat, lng) < Math.PI / 2 ? 1 : 0; // hide on far side
+    }
+
+    // Trail — fading dots at the comet's recent positions (rides the same arc)
+    for (let k = 0; k < COMET_TRAIL; k++) {
+        const el = trailEls[k];
+        const h = posHistory[(k + 1) * COMET_TRAIL_STEP];
+        if (!h) { el.style.opacity = 0; continue; }
+        const tc = globe.getScreenCoords(h.lat, h.lng, h.alt);
+        if (!tc || viewAngle(h.lat, h.lng) >= Math.PI / 2) { el.style.opacity = 0; continue; }
+        const fade = 1 - k / COMET_TRAIL;       // 1 at the head → 0 at the tail
+        el.style.left = `${tc.x}px`;
+        el.style.top = `${tc.y}px`;
+        el.style.opacity = (fade * fade * 0.9).toFixed(3);     // brighter head, quick falloff
+        el.style.transform = `translate(-50%, -50%) scale(${(0.18 + fade * 1.05).toFixed(2)})`;
+    }
+
+    // Lingering arrival label at its city
+    if (labelCity && now < labelUntil) {
+        if (cometLabel.dataset.city !== labelCity.name) {
+            cometLabel.dataset.city = labelCity.name;
+            cometLabel.innerHTML = `<span class="replay-label-name">${labelCity.name}</span><span class="replay-label-date">${labelCity.date || ''}</span>`;
+        }
+        const lc = globe.getScreenCoords(labelCity.lat, labelCity.lng, 0.04);
+        if (lc) {
+            cometLabel.style.left = `${lc.x}px`;
+            cometLabel.style.top = `${lc.y}px`;
+            cometLabel.style.opacity = viewAngle(labelCity.lat, labelCity.lng) < Math.PI / 2 ? 1 : 0;
+        }
+    } else {
+        cometLabel.style.opacity = 0;
+        labelCity = null;
+    }
+})(performance.now());
+
 window.addEventListener('resize', () => {
     const size = getGlobeSize();
     globe.width(size).height(size);
