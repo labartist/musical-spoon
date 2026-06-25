@@ -168,6 +168,92 @@ h1 {
     background: #333;
 }
 
+/* GitHub activity — toggled inline by the Github link */
+.gh-link-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.gh-toggle {
+    cursor: pointer;
+}
+
+.gh-ext {
+    color: #555 !important;
+    font-size: 0.7rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.gh-ext::after {
+    content: none !important; /* skip the underline animation on the icon */
+}
+
+.gh-ext:hover {
+    color: #aa9fc6 !important;
+}
+
+.gh-mark {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+.github-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease, margin-top 0.4s ease;
+}
+
+.github-panel.open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 1.5rem;
+}
+
+.github-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.github-heatmap {
+    width: 100%;
+}
+
+.gh-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.gh-mon {
+    font-size: 7px;
+    fill: #555;
+    font-family: 'Inter', -apple-system, sans-serif;
+    letter-spacing: 0.04em;
+}
+
+.gh-cap {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #555;
+}
+
+.github-err {
+    font-size: 0.65rem;
+    color: #555;
+}
+
 /* Context bar — time & weather */
 .context-bar {
     display: flex;
@@ -347,12 +433,13 @@ summary.dropdown-toggle::marker {
 }
 
 /* Hover tooltip on the trend chart (fixed → escapes the dropdown's overflow clip) */
-.trend-tip {
+.trend-tip,
+.gh-tip {
     position: fixed;
     transform: translate(-50%, calc(-100% - 6px));
-    background: rgba(10, 10, 10, 0.45);
-    border: 1.5px solid #2a2a33;
-    border-radius: 12px;
+    background: rgba(8, 8, 8, 0.45);
+    border: 1px solid #1a1a1f;
+    border-radius: 8px;
     padding: 6px 9px;
     display: flex;
     flex-direction: column;
@@ -365,14 +452,15 @@ summary.dropdown-toggle::marker {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
-.trend-tip.show {
+.trend-tip.show,
+.gh-tip.show {
     opacity: 1;
 }
 
 .trend-tip-date {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.56rem;
     font-weight: 600;
-    text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #ececf0;
     margin-bottom: 1px;
@@ -561,7 +649,7 @@ summary.dropdown-toggle::marker {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    background: rgba(8, 8, 12, 0.92);
+    background: rgba(8, 8, 8, 0.92);
     border: 1px solid #26262e;
     border-radius: 8px;
     padding: 7px 11px;

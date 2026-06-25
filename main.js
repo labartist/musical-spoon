@@ -685,3 +685,87 @@ setInterval(() => {
         })
         .catch(() => {});
 }, 5 * 60 * 1000);
+
+// ── GitHub activity heatmap (lazy — loads only when the Github link is opened) ──
+(() => {
+    const toggle = document.getElementById('gh-toggle');
+    const panel = document.getElementById('github-panel');
+    const heatmap = document.getElementById('github-heatmap');
+    if (!toggle || !panel || !heatmap) return;
+
+    const GH_USER = 'labartist';
+    const GH_WEEKS = 17; // ~4 months
+    const GH_COLORS = ['#17171f', '#2e2b3a', '#4a4459', '#746b8c', '#aa9fc6']; // levels 0–4 (muted violet)
+    let loaded = false;
+
+    // Custom dark tooltip (shares .trend-tip styling), on <body> so the hero transform can't clip it
+    const ghTip = document.createElement('div');
+    ghTip.className = 'gh-tip';
+    document.body.appendChild(ghTip);
+
+    function render(days) {
+        if (!days.length) { heatmap.innerHTML = '<span class="github-err">No recent activity.</span>'; return; }
+        const CELL = 12, GAP = 3, PITCH = CELL + GAP, TOP = 14;
+        const byDate = {};
+        days.forEach(d => { byDate[d.date] = d; });
+        const end = new Date(days[days.length - 1].date + 'T00:00:00');
+        const start = new Date(end);
+        start.setDate(end.getDate() - (GH_WEEKS * 7 - 1));
+        start.setDate(start.getDate() - start.getDay()); // align to a Sunday column
+        const cells = [], months = [];
+        let total = 0;
+        for (let w = 0; w < GH_WEEKS; w++) {
+            for (let dow = 0; dow < 7; dow++) {
+                const dt = new Date(start);
+                dt.setDate(start.getDate() + w * 7 + dow);
+                if (dt > end) continue;
+                const ds = dt.toISOString().slice(0, 10);
+                const rec = byDate[ds];
+                const lvl = rec ? rec.level : 0;
+                total += rec ? rec.count : 0;
+                const x = w * PITCH, y = TOP + dow * PITCH;
+                cells.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2.5" fill="${GH_COLORS[lvl] || GH_COLORS[0]}" data-d="${ds}" data-c="${rec ? rec.count : 0}"></rect>`);
+                if (dow === 0 && dt.getDate() <= 7) months.push(`<text x="${x}" y="9" class="gh-mon">${dt.toLocaleDateString('en-GB', { month: 'short' })}</text>`);
+            }
+        }
+        const W = GH_WEEKS * PITCH - GAP, H = TOP + 7 * PITCH - GAP;
+        heatmap.innerHTML = `<svg class="gh-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${months.join('')}${cells.join('')}</svg>`
+            + `<div class="gh-cap">${total.toLocaleString()} Contributions · Past 4 months</div>`;
+
+        // Themed tooltip on cell hover (anchored above the cell)
+        const svg = heatmap.querySelector('svg');
+        svg.addEventListener('mouseover', e => {
+            const r = e.target;
+            if (!r.dataset || !r.dataset.d) return;
+            const dateStr = new Date(r.dataset.d + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
+            const c = +r.dataset.c;
+            ghTip.innerHTML = `<span class="trend-tip-date">${dateStr}</span><span class="trend-tip-row">${c} contribution${c === 1 ? '' : 's'}</span>`;
+            const bb = r.getBoundingClientRect();
+            ghTip.style.left = `${bb.left + bb.width / 2}px`;
+            ghTip.style.top = `${bb.top}px`;
+            ghTip.classList.add('show');
+        });
+        svg.addEventListener('mouseleave', () => ghTip.classList.remove('show'));
+    }
+
+    async function loadHeatmap() {
+        if (loaded) return;
+        loaded = true;
+        try {
+            const r = await fetch(`https://github-contributions-api.jogruber.de/v4/${GH_USER}?y=last`);
+            if (!r.ok) throw new Error('bad response');
+            const data = await r.json();
+            render(data.contributions || []);
+        } catch (e) {
+            loaded = false; // let the next open retry
+            heatmap.innerHTML = '<span class="github-err">Couldn\'t load GitHub activity.</span>';
+        }
+    }
+
+    toggle.addEventListener('click', e => {
+        e.preventDefault();
+        const open = panel.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) loadHeatmap();
+    });
+})();
