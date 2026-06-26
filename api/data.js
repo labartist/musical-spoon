@@ -17,7 +17,9 @@ export default async function handler(req, res) {
 			return res.status(404).json({ error: 'No data yet' });
 		}
 
-		return res.status(200).json(data);
+		const history = (await kv.get('vitals_history')) || [];
+		const locations = (await kv.get('location_history')) || [];
+		return res.status(200).json({ ...data, history, locations });
 	} catch (e) {
 		return res.status(500).json({ error: 'Internal error' });
 	}

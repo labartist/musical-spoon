@@ -168,6 +168,92 @@ h1 {
     background: #333;
 }
 
+/* GitHub activity — toggled inline by the Github link */
+.gh-link-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.gh-toggle {
+    cursor: pointer;
+}
+
+.gh-ext {
+    color: #555 !important;
+    font-size: 0.7rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.gh-ext::after {
+    content: none !important; /* skip the underline animation on the icon */
+}
+
+.gh-ext:hover {
+    color: #aa9fc6 !important;
+}
+
+.gh-mark {
+    display: block;
+    width: 12px;
+    height: 12px;
+}
+
+.github-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease, margin-top 0.4s ease;
+}
+
+.github-panel.open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 1.5rem;
+}
+
+.github-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.github-heatmap {
+    width: 100%;
+}
+
+.gh-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.gh-mon {
+    font-size: 7px;
+    fill: #555;
+    font-family: 'Inter', -apple-system, sans-serif;
+    letter-spacing: 0.04em;
+}
+
+.gh-cap {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #555;
+}
+
+.github-err {
+    font-size: 0.65rem;
+    color: #555;
+}
+
 /* Context bar — time & weather */
 .context-bar {
     display: flex;
@@ -317,6 +403,112 @@ summary.dropdown-toggle::marker {
     color: #ececf0;
 }
 
+/* Weekly trend chart — combined steps/distance/calories */
+.vitals-trend {
+    position: relative;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    max-width: 280px;
+    margin: 2.75rem auto 0;
+    opacity: 0;
+    animation: sparkFade 0.6s ease 0.2s forwards;
+}
+
+.trend-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #444;
+}
+
+.trend-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: crosshair;
+}
+
+/* Hover tooltip on the trend chart (fixed → escapes the dropdown's overflow clip) */
+.trend-tip,
+.gh-tip {
+    position: fixed;
+    transform: translate(-50%, calc(-100% - 6px));
+    background: rgba(8, 8, 8, 0.45);
+    border: 1px solid #1a1a1f;
+    border-radius: 8px;
+    padding: 6px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    z-index: 6;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.trend-tip.show,
+.gh-tip.show {
+    opacity: 1;
+}
+
+.trend-tip-date {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.56rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #ececf0;
+    margin-bottom: 1px;
+}
+
+.trend-tip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: #b8b8c0;
+}
+
+.trend-tip-row i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.trend-legend {
+    display: flex;
+    gap: 1.1rem;
+}
+
+.trend-lg {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.58rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #444;
+}
+
+.trend-lg i {
+    width: 9px;
+    height: 2px;
+    border-radius: 1px;
+    display: inline-block;
+}
+
+@keyframes sparkFade {
+    to { opacity: 1; }
+}
+
 /* Product showcase carousel */
 .showcase {
     overflow: hidden;
@@ -330,6 +522,18 @@ summary.dropdown-toggle::marker {
     -webkit-overflow-scrolling: touch;
     padding: 0 1rem 1rem;
     scrollbar-width: none;
+    cursor: grab;
+    user-select: none;
+}
+
+.showcase-track.dragging {
+    cursor: grabbing;
+}
+
+.showcase-track img,
+.showcase-card {
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 .showcase-track::-webkit-scrollbar {
@@ -431,6 +635,42 @@ summary.dropdown-toggle::marker {
     transform: translate(-50%, -50%);
     opacity: 0;
     z-index: 1;
+}
+
+/* Globe hover tooltip (city + date) — strip globe.gl's default wrapper box */
+.float-tooltip-kap {
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.globe-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(8, 8, 8, 0.92);
+    border: 1px solid #26262e;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.globe-tip-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ececf0;
+    letter-spacing: 0.01em;
+}
+
+.globe-tip-sub {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: #8a8a95;
+    letter-spacing: 0.02em;
 }
 
 /* Fade-in animations */
