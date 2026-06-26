@@ -537,6 +537,25 @@ function renderTrend(history) {
     let tip = document.querySelector('body > .trend-tip');
     if (!tip) { tip = document.createElement('div'); tip.className = 'trend-tip'; document.body.appendChild(tip); }
 
+    // Bind viewport-level dismissal once (renderTrend re-runs on each data refresh).
+    // A fixed tooltip can't follow the sparkline, so hide it on scroll instead of
+    // letting it stick to the screen; also hide it when tapping elsewhere.
+    if (!window._trendTipDismissBound) {
+        window._trendTipDismissBound = true;
+        const hideTrendTip = () => {
+            const t = document.querySelector('body > .trend-tip');
+            if (t) t.classList.remove('show');
+            const g = document.querySelector('.trend-guide');
+            if (g) g.setAttribute('opacity', '0');
+            document.querySelectorAll('.trend-hi').forEach(d => d.setAttribute('opacity', '0'));
+        };
+        // capture:true so scrolls inside the dropdown (which don't bubble) are caught too
+        window.addEventListener('scroll', hideTrendTip, { passive: true, capture: true });
+        document.addEventListener('pointerdown', e => {
+            if (!(e.target instanceof Element) || !e.target.closest('.trend-svg')) hideTrendTip();
+        }, true);
+    }
+
     function showAt(i) {
         const x = xOf(i);
         guideEl.setAttribute('x1', x); guideEl.setAttribute('x2', x); guideEl.setAttribute('opacity', '1');
@@ -555,14 +574,18 @@ function renderTrend(history) {
         tip.classList.remove('show');
     }
 
-    svgEl.addEventListener('mousemove', e => {
+    const nearestTo = clientX => {
         const r = svgEl.getBoundingClientRect();
-        const vx = ((e.clientX - r.left) / r.width) * TREND_W;
+        const vx = ((clientX - r.left) / r.width) * TREND_W;
         let bi = 0, bd = Infinity;
         for (let i = 0; i < n; i++) { const d = Math.abs(xOf(i) - vx); if (d < bd) { bd = d; bi = i; } }
-        showAt(bi);
-    });
+        return bi;
+    };
+    svgEl.addEventListener('mousemove', e => showAt(nearestTo(e.clientX)));
     svgEl.addEventListener('mouseleave', hide);
+    // Touch/pen: tap or drag along the chart to scrub (hover doesn't fire on touch)
+    svgEl.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') showAt(nearestTo(e.clientX)); });
+    svgEl.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') showAt(nearestTo(e.clientX)); });
 }
 
 // Sample history so the trend chart renders in local/demo mode (dates = last 7 days)
@@ -733,20 +756,42 @@ setInterval(() => {
         heatmap.innerHTML = `<svg class="gh-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${months.join('')}${cells.join('')}</svg>`
             + `<div class="gh-cap">${total.toLocaleString()} Contributions · Past 4 months</div>`;
 
-        // Themed tooltip on cell hover (anchored above the cell)
+        // Themed tooltip on cell hover (desktop) / tap (touch), clamped on-screen
         const svg = heatmap.querySelector('svg');
-        svg.addEventListener('mouseover', e => {
-            const r = e.target;
-            if (!r.dataset || !r.dataset.d) return;
-            const dateStr = new Date(r.dataset.d + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
-            const c = +r.dataset.c;
+        const TIP_PAD = 8; // keep this far from the viewport edges
+
+        function showTipFor(rect) {
+            if (!rect || !rect.dataset || !rect.dataset.d) return;
+            const dateStr = new Date(rect.dataset.d + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
+            const c = +rect.dataset.c;
             ghTip.innerHTML = `<span class="trend-tip-date">${dateStr}</span><span class="trend-tip-row">${c} Contribution${c === 1 ? '' : 's'}</span>`;
-            const bb = r.getBoundingClientRect();
-            ghTip.style.left = `${bb.left + bb.width / 2}px`;
-            ghTip.style.top = `${bb.top}px`;
-            ghTip.classList.add('show');
+            ghTip.classList.add('show'); // show first so the tip has measurable dimensions
+            const bb = rect.getBoundingClientRect();
+            const tip = ghTip.getBoundingClientRect();
+            const vw = document.documentElement.clientWidth;
+            // Center over the cell, but clamp so the tip never runs off the sides
+            const half = tip.width / 2;
+            const cx = Math.max(TIP_PAD + half, Math.min(bb.left + bb.width / 2, vw - TIP_PAD - half));
+            // Sit above the cell; flip below when there isn't room near the top
+            const flipBelow = bb.top - tip.height - 6 < TIP_PAD;
+            ghTip.style.left = `${cx}px`;
+            ghTip.style.top = `${flipBelow ? bb.bottom : bb.top}px`;
+            ghTip.style.transform = flipBelow
+                ? 'translate(-50%, 6px)'
+                : 'translate(-50%, calc(-100% - 6px))';
+        }
+        const hideTip = () => ghTip.classList.remove('show');
+
+        // Desktop: follow the pointer across cells
+        svg.addEventListener('mouseover', e => showTipFor(e.target));
+        svg.addEventListener('mouseleave', hideTip);
+        // Touch/pen: tap a cell to show (hover events don't fire reliably on touch)
+        svg.addEventListener('pointerdown', e => {
+            if (e.pointerType !== 'mouse') showTipFor(e.target);
         });
-        svg.addEventListener('mouseleave', () => ghTip.classList.remove('show'));
+        // Dismiss when tapping away or scrolling (a fixed tip would otherwise drift)
+        document.addEventListener('pointerdown', e => { if (!svg.contains(e.target)) hideTip(); }, true);
+        window.addEventListener('scroll', hideTip, { passive: true });
     }
 
     async function loadHeatmap() {
