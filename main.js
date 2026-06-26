@@ -537,6 +537,25 @@ function renderTrend(history) {
     let tip = document.querySelector('body > .trend-tip');
     if (!tip) { tip = document.createElement('div'); tip.className = 'trend-tip'; document.body.appendChild(tip); }
 
+    // Bind viewport-level dismissal once (renderTrend re-runs on each data refresh).
+    // A fixed tooltip can't follow the sparkline, so hide it on scroll instead of
+    // letting it stick to the screen; also hide it when tapping elsewhere.
+    if (!window._trendTipDismissBound) {
+        window._trendTipDismissBound = true;
+        const hideTrendTip = () => {
+            const t = document.querySelector('body > .trend-tip');
+            if (t) t.classList.remove('show');
+            const g = document.querySelector('.trend-guide');
+            if (g) g.setAttribute('opacity', '0');
+            document.querySelectorAll('.trend-hi').forEach(d => d.setAttribute('opacity', '0'));
+        };
+        // capture:true so scrolls inside the dropdown (which don't bubble) are caught too
+        window.addEventListener('scroll', hideTrendTip, { passive: true, capture: true });
+        document.addEventListener('pointerdown', e => {
+            if (!(e.target instanceof Element) || !e.target.closest('.trend-svg')) hideTrendTip();
+        }, true);
+    }
+
     function showAt(i) {
         const x = xOf(i);
         guideEl.setAttribute('x1', x); guideEl.setAttribute('x2', x); guideEl.setAttribute('opacity', '1');
@@ -555,14 +574,18 @@ function renderTrend(history) {
         tip.classList.remove('show');
     }
 
-    svgEl.addEventListener('mousemove', e => {
+    const nearestTo = clientX => {
         const r = svgEl.getBoundingClientRect();
-        const vx = ((e.clientX - r.left) / r.width) * TREND_W;
+        const vx = ((clientX - r.left) / r.width) * TREND_W;
         let bi = 0, bd = Infinity;
         for (let i = 0; i < n; i++) { const d = Math.abs(xOf(i) - vx); if (d < bd) { bd = d; bi = i; } }
-        showAt(bi);
-    });
+        return bi;
+    };
+    svgEl.addEventListener('mousemove', e => showAt(nearestTo(e.clientX)));
     svgEl.addEventListener('mouseleave', hide);
+    // Touch/pen: tap or drag along the chart to scrub (hover doesn't fire on touch)
+    svgEl.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') showAt(nearestTo(e.clientX)); });
+    svgEl.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') showAt(nearestTo(e.clientX)); });
 }
 
 // Sample history so the trend chart renders in local/demo mode (dates = last 7 days)
