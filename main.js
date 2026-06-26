@@ -708,10 +708,11 @@ setInterval(() => {
         const CELL = 12, GAP = 3, PITCH = CELL + GAP, TOP = 14;
         const byDate = {};
         days.forEach(d => { byDate[d.date] = d; });
-        const end = new Date(days[days.length - 1].date + 'T00:00:00');
+        // Anchor to today, like GitHub: the last column is the current week (cells fill
+        // top→bottom as the week progresses); the oldest week drops off the left edge.
+        const end = new Date(); end.setHours(0, 0, 0, 0);
         const start = new Date(end);
-        start.setDate(end.getDate() - (GH_WEEKS * 7 - 1));
-        start.setDate(start.getDate() - start.getDay()); // align to a Sunday column
+        start.setDate(end.getDate() - end.getDay() - (GH_WEEKS - 1) * 7); // Sunday, GH_WEEKS-1 weeks back
         const cells = [], months = [];
         let total = 0;
         for (let w = 0; w < GH_WEEKS; w++) {
@@ -719,7 +720,7 @@ setInterval(() => {
                 const dt = new Date(start);
                 dt.setDate(start.getDate() + w * 7 + dow);
                 if (dt > end) continue;
-                const ds = dt.toISOString().slice(0, 10);
+                const ds = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; // local date (not UTC) so today maps right
                 const rec = byDate[ds];
                 const lvl = rec ? rec.level : 0;
                 total += rec ? rec.count : 0;
@@ -739,7 +740,7 @@ setInterval(() => {
             if (!r.dataset || !r.dataset.d) return;
             const dateStr = new Date(r.dataset.d + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
             const c = +r.dataset.c;
-            ghTip.innerHTML = `<span class="trend-tip-date">${dateStr}</span><span class="trend-tip-row">${c} contribution${c === 1 ? '' : 's'}</span>`;
+            ghTip.innerHTML = `<span class="trend-tip-date">${dateStr}</span><span class="trend-tip-row">${c} Contribution${c === 1 ? '' : 's'}</span>`;
             const bb = r.getBoundingClientRect();
             ghTip.style.left = `${bb.left + bb.width / 2}px`;
             ghTip.style.top = `${bb.top}px`;
@@ -768,4 +769,7 @@ setInterval(() => {
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (open) loadHeatmap();
     });
+
+    // Preload on page load so the heatmap is ready the instant the panel opens
+    loadHeatmap();
 })();
