@@ -497,6 +497,17 @@ function fmtTrendDate(d) {
     return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
 }
 
+// Pinch-zoom anchoring for position:fixed tooltips. When zoomed on mobile,
+// getBoundingClientRect() is relative to the visual viewport but position:fixed
+// resolves against the layout viewport — so add the visual viewport's offset to
+// convert into layout coords, and clamp to the visible region. All zeros / full
+// width when unzoomed, so desktop behavior is unchanged.
+function visualViewportBox() {
+    const vv = window.visualViewport;
+    if (!vv) return { left: 0, top: 0, width: document.documentElement.clientWidth, height: document.documentElement.clientHeight };
+    return { left: vv.offsetLeft, top: vv.offsetTop, width: vv.width, height: vv.height };
+}
+
 // One subtle chart: each metric normalized to its own range, overlaid (they move
 // together, so it reads as a single weekly trend). Hover a day → guide + tooltip.
 function renderTrend(history) {
@@ -551,6 +562,7 @@ function renderTrend(history) {
         };
         // capture:true so scrolls inside the dropdown (which don't bubble) are caught too
         window.addEventListener('scroll', hideTrendTip, { passive: true, capture: true });
+        window.visualViewport?.addEventListener('scroll', hideTrendTip); // pinch-zoom pan
         document.addEventListener('pointerdown', e => {
             if (!(e.target instanceof Element) || !e.target.closest('.trend-svg')) hideTrendTip();
         }, true);
@@ -564,8 +576,9 @@ function renderTrend(history) {
         tip.innerHTML = `<span class="trend-tip-date">${fmtTrendDate(h.date)}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
         const sRect = svgEl.getBoundingClientRect();
-        tip.style.left = (sRect.left + (x / TREND_W) * sRect.width) + 'px';
-        tip.style.top = sRect.top + 'px';
+        const vp = visualViewportBox(); // convert to layout coords so it stays put when pinch-zoomed
+        tip.style.left = (sRect.left + (x / TREND_W) * sRect.width + vp.left) + 'px';
+        tip.style.top = (sRect.top + vp.top) + 'px';
         tip.classList.add('show');
     }
     function hide() {
@@ -768,14 +781,14 @@ setInterval(() => {
             ghTip.classList.add('show'); // show first so the tip has measurable dimensions
             const bb = rect.getBoundingClientRect();
             const tip = ghTip.getBoundingClientRect();
-            const vw = document.documentElement.clientWidth;
-            // Center over the cell, but clamp so the tip never runs off the sides
+            const vp = visualViewportBox();
+            // Center over the cell, but clamp within the visible region (handles pinch-zoom)
             const half = tip.width / 2;
-            const cx = Math.max(TIP_PAD + half, Math.min(bb.left + bb.width / 2, vw - TIP_PAD - half));
-            // Sit above the cell; flip below when there isn't room near the top
+            const cx = Math.max(vp.left + TIP_PAD + half, Math.min(bb.left + bb.width / 2 + vp.left, vp.left + vp.width - TIP_PAD - half));
+            // Sit above the cell; flip below when there isn't room above it on-screen
             const flipBelow = bb.top - tip.height - 6 < TIP_PAD;
             ghTip.style.left = `${cx}px`;
-            ghTip.style.top = `${flipBelow ? bb.bottom : bb.top}px`;
+            ghTip.style.top = `${(flipBelow ? bb.bottom : bb.top) + vp.top}px`;
             ghTip.style.transform = flipBelow
                 ? 'translate(-50%, 6px)'
                 : 'translate(-50%, calc(-100% - 6px))';
@@ -792,6 +805,7 @@ setInterval(() => {
         // Dismiss when tapping away or scrolling (a fixed tip would otherwise drift)
         document.addEventListener('pointerdown', e => { if (!svg.contains(e.target)) hideTip(); }, true);
         window.addEventListener('scroll', hideTip, { passive: true });
+        window.visualViewport?.addEventListener('scroll', hideTip); // pinch-zoom pan
     }
 
     async function loadHeatmap() {
