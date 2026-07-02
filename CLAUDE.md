@@ -3,44 +3,49 @@
 A "living dashboard" personal site for Gary Ramli (ex-SWE, now runs Parklane
 furniture). Static front-end + a tiny Vercel serverless backend that surfaces
 real-time location, weather, daily activity from Apple Health, a 3D travel
-globe, and a Parklane product showcase.
+globe with auto-tracking, activity trends, and a GitHub/LinkedIn/Parklane
+reveal panel system.
 
-**Live:** https://garyramli.com · **Repo:** labartist/musical-spoon · **Host:** Vercel
+**Live:** https://garyramli.com · **Repo:** labartist/musical-spoon (public) · **Host:** Vercel
 
 ## Stack
 
 - **Front-end:** vanilla HTML/CSS/JS — no framework, no build step
 - **Globe:** [globe.gl](https://globe.gl) (Three.js) via unpkg CDN, Natural Earth 110m GeoJSON
 - **Weather/time:** [Open-Meteo](https://open-meteo.com) API (free, no key) — also the source of the local timezone/city
-- **Backend:** Vercel serverless functions (`/api`) + Vercel KV (Upstash Redis)
+- **GitHub activity:** [github-contributions-api.jogruber.de](https://github-contributions-api.jogruber.de) (free, no key)
+- **Backend:** Vercel serverless functions (`/api`, ESM) + Vercel KV (Upstash Redis)
 - **Fonts:** Inter (Google Fonts)
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Single page: hero, globe, time/weather, Daily Vitals dropdown, Parklane Collections dropdown, footer |
+| `index.html` | Single page: hero (name + GitHub/LinkedIn/Parklane reveal panels), globe, time/weather, Daily Vitals section (steps/distance/calories + trend), footer |
 | `style.css` | All styling. Dark theme: bg `#08080c`, text `#ececf0`, muted `#444`/`#666` |
-| `main.js` | Globe + travel trail, vitals/weather/time fetch, dropdown animations, carousel drag-to-scroll |
-| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals` + upserts a daily `vitals_history` snapshot (last 14 days) to KV |
-| `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` (60s cache), returns `{...vitals, history}` |
-| `package.json` | Only dep: `@vercel/kv` |
+| `main.js` | Globe + travel trail + auto-tracking, vitals/weather/time fetch, hero-panel accordion animations, carousel drag-to-scroll, GitHub heatmap |
+| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (last 14 days), and appends distance-deduped stops to `location_history` (last 10) |
+| `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` + `location_history` (60s cache), returns `{...vitals, history, locations}` |
+| `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
 | `og-image.png` | 1200×630 social share card (generated, dark themed) |
+| `CHECKLIST.md` | Manual verification checklist (run through after any change) |
 
 ## Data flow
 
 1. **iOS Shortcut** (on Gary's phone) reads Apple Health (steps, distance,
    calories) + GPS, `POST`s JSON to `/api/update` with `Authorization: Bearer <AUTH_KEY>`.
 2. `update.js` validates auth + rate limit, stores the latest `vitals` object,
-   and upserts today's entry into `vitals_history` (one row per Jakarta day,
-   capped to the last 14) in KV.
+   upserts today's entry into `vitals_history` (one row per Jakarta day,
+   capped to 14), and — if the ping is >80km from the last recorded stop —
+   appends it to `location_history` (capped to 10, dedupes daily movement).
 3. Browser `GET`s `/api/data` on load and every 5 min; falls back to demo
-   values when the API 404s (e.g. local dev). Response includes `history`.
-4. `lat/lng` from the response repositions the globe pin and triggers the
-   Open-Meteo weather/timezone fetch.
+   values when the API 404s (e.g. local dev). Response includes `history` + `locations`.
+4. `lat/lng` repositions the globe pin and triggers the Open-Meteo weather/timezone fetch.
+   `locations` are reverse-geocoded (BigDataCloud, free/no-key) client-side and
+   appended onto the curated 2026 trail as new dots + arcs.
 
-**KV keys:** `vitals` (latest snapshot), `vitals_history` (array of daily
-snapshots), `last_update_time` (rate-limit guard).
+**KV keys:** `vitals` (latest snapshot), `vitals_history` (daily snapshots),
+`location_history` (deduped travel stops), `last_update_time` (rate-limit guard).
 
 **Env vars (Vercel):** `AUTH_KEY` (shared secret with the iOS Shortcut) + the
 `KV_*` connection vars (auto-injected by the Vercel KV integration).
@@ -48,48 +53,108 @@ snapshots), `last_update_time` (rate-limit guard).
 ## Globe behavior (main.js)
 
 - **Hex-grid Earth** (`#baa6d0` dots), atmosphere `#6a5acd`, dark surface.
-- **Travel trail** — hardcoded 2026 journey as **round-trips from the Jakarta
-  hub** (`HOME` → `PLACES` → `JOURNEY` → deduped undirected `TRAVEL_ARCS`).
+- **Travel trail** — curated 2026 journey (`HOME` → `PLACES` → `JOURNEY`,
+  round-trips from the Jakarta hub, deduped undirected `buildArcs()`) as the
+  base, with **auto-tracked stops** (`applyLocations()`) appended on top as
+  new dots + arcs once real travel is recorded in `location_history`.
   Arcs are smooth (128-seg) with a gentle flowing shimmer fading out from Jakarta.
   ⚠️ Bali sits slightly over water — 110m GeoJSON drops small islands (known, accepted).
 - **Pins** — live location = small white beacon + CSS glow overlay; travel
-  stops = periwinkle dots. Each has a large invisible hit-target for easy hover.
+  stops (curated + auto) = periwinkle dots. Each has a large invisible hit-target for easy hover.
 - **Hover tooltips** (`pointLabel`) — city + date for stops, current city +
   "Current location" for the live pin.
 - **Auto-spin** — pauses while dragging/hovering the globe, eases back up to
   speed ~0.5s after 3s of stillness (`updateAutoSpin()` in the `trackPin` loop).
+- **Guided-replay comet** — built but parked on branch `guided-replay-comet`
+  (not merged). Flies the journey chronologically with a meteor-style trail;
+  needs another polish pass (trail/color) before shipping.
+
+## Hero reveal panels (GitHub / LinkedIn / Parklane)
+
+All three social links share one pattern: **icon = toggle** (opens an inline
+panel below the nav), **text = real outbound link** (new tab). Panels are
+accordion-style — opening one closes any other (`registerHeroPanel()` in main.js).
+
+- **GitHub** (octocat icon) → activity heatmap. Lazy-loads on page load (not
+  just on open) from the jogruber API; ~4-month grid anchored to *today*
+  (local date, not UTC) so the current week always shows. Touch support +
+  pinch-zoom-aware tooltip positioning (`visualViewportBox()`).
+- **LinkedIn** ("in" mark icon) → static About blurb (headline + bio). No live
+  API — LinkedIn has no public profile endpoint, so this is hand-authored text
+  in `index.html`, not KV/JS driven.
+- **Parklane** (the real Parklane favicon, dimmed via `filter: brightness()`)
+  → the product carousel (moved here from the old bottom dropdown).
+
+**Icon styling:** all three use `.gh-toggle` — muted grey at rest, glow on
+hover *and* while its panel is open (`[aria-expanded="true"]`), no underline
+animation (unlike the plain text links, which do get the underline). The glow
+color is one dial: the `--icon-glow` CSS var (`:root`, currently `#aa9fc6`) —
+icon SVGs use `currentColor`; the Parklane favicon (`<img>`, no `currentColor`)
+gets a matching `drop-shadow(... var(--icon-glow))` instead. ⚠️ The hover rule
+is scoped `.social-links a.gh-toggle:hover` on purpose: it must out-specify
+`.social-links a:hover` (which sets grey `#d0d0d5`), or hover reverts to grey
+while only the open state shows the glow. Keep the `.social-links a.gh-toggle`
+scoping if you touch it.
 
 ## UI conventions
 
-- **Dropdowns** (`.dropdown` / `.dropdown-toggle` / `.dropdown-content`) — shared
-  `<details>`/`<summary>` pattern with JS-driven grid-rows slide animation
-  (native marker hidden, custom rotating arrow).
+- **Reveal panels** (`.github-panel`) — the live accordion, plain `<div>`s
+  driven by `registerHeroPanel()`, animated open/closed via a grid-rows slide
+  (`grid-template-rows: 0fr → 1fr`). Opening one closes the others.
+- **Dropdowns** (`.dropdown` / `.dropdown-toggle` / `.dropdown-content`) — the
+  older `<details>`/`<summary>` pattern (same grid-rows slide, native marker
+  hidden, custom rotating arrow). ⚠️ Currently **dormant** — no live instances
+  (Daily Vitals became a plain section, the Parklane showcase moved to a reveal
+  panel). CSS + the `.dropdown` JS loop are kept for reuse; the loop is a no-op
+  until a `.dropdown` element exists again.
+- **Daily Vitals** — plain always-on `<section class="vitals">` (static
+  `DAILY VITALS` heading → steps/distance/calories grid → weekly trend chart),
+  no longer collapsible.
 - **Labels** — uppercase, letter-spaced, `#666` weight 600.
 - **Carousel** — horizontal scroll-snap track, drag-to-scroll (a real drag
   suppresses the card link click; native link/image drag is blocked).
+- **Trend chart** — weekly steps/distance/calories overlay under Daily Vitals,
+  hover for a per-day tooltip (pinch-zoom aware, same as the GitHub tooltip).
 
 ## Local preview
 
-`.claude/launch.json` runs `python -m http.server` against the **main repo**
-(not the worktree) via `--directory`. The API routes 404 locally (no Vercel
-runtime), so vitals show demo values — this is expected.
+Work **directly in the main repo on `master`** — no worktrees. `.claude/launch.json`
+(gitignored, local) runs `python -m http.server --directory <main repo>`, so the
+preview serves the main repo itself. The API routes 404 locally (no Vercel
+runtime), so vitals/trend/locations fall back to demo values — this is expected.
 
 ⚠️ **Browser caches JS/CSS aggressively on a fixed port.** When iterating, bump
-the port number in `launch.json` and restart the preview to force a fresh load.
+the port number in `.claude/launch.json` and restart the preview to force a fresh load.
+
+Run through `CHECKLIST.md` after non-trivial changes.
 
 ## Workflow notes
 
-- **Ask before pushing.** Preview changes first; keep the worktree clean
-  (`git reset --hard origin/master` after pushing).
-- Main branch: `master`. Vercel auto-deploys on push.
+- **Ask before pushing.** Preview changes first, then confirm before `git push`.
+- **No worktrees.** The harness may create `.claude/worktrees/*` checkouts —
+  ignore them. Edit, commit, push, and preview from the main repo only; never
+  copy files into a worktree or `git reset --hard` one to "keep it in sync."
+- **Leave the preview server running and give Gary the localhost URL** so he
+  can verify himself — don't rely solely on eval/screenshot self-verification
+  for interactive behavior (this preview environment's screenshot/resize tools
+  have shown flakiness with multi-panel click state; direct DOM `.click()` +
+  computed-style checks are more reliable for logic verification, but Gary's
+  own click-through is the real test).
+- Main branch: `master`. Vercel auto-deploys on push. Repo is **public** — no
+  secrets belong in the repo itself (env vars only).
+- Check `git fetch && git log origin/master` before starting new work — other
+  sessions (e.g. iOS Claude) may have pushed/merged PRs directly.
+
+## Known open branches (not merged)
+
+- `guided-replay-comet` — the parked comet feature (see above).
+- `vercel/vercel-web-analytics-integrati-w4sum0` — unmerged Vercel Web
+  Analytics integration; finish or delete.
+- Assorted `dependabot/*` branches — routine dependency bump PRs.
 
 ## Roadmap / parked ideas
 
-- **Activity sparklines** — 7-day trends under the vitals. Data plumbing is
-  DONE (`vitals_history`); needs a few days banked + the front-end charts.
-- **About / Projects section** — the portfolio still has no bio/work content
-  (waiting on Gary's bio + project list).
-- **Location auto-tracking** — append each ping to a location history (cap last
-  10 stops, dedupe by city) so the travel trail self-updates instead of staying
-  hardcoded. The thornier half of the KV work — not started.
-- **Guided-replay comet** — animate the journey in chronological order.
+- **About / Projects section** — LinkedIn panel now covers a short bio; a
+  fuller Projects section is still open if Gary wants one.
+- **Guided-replay comet** — parked branch, needs a polish pass.
+- **Vercel Web Analytics** — open branch, decide finish vs. drop.

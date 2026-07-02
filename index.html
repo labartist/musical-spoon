@@ -41,23 +41,92 @@
                 <p class="tagline">Welcome to my corner of the internet!</p>
                 <nav class="social-links">
                     <span class="gh-link-wrap">
-                        <a href= class="gh-toggle" id="gh-toggle" aria-expanded="false" aria-controls="github-panel"
-                        class="gh-ext" aria-label="Open GitHub profile">
+                        <a href="#github" class="gh-toggle" id="gh-toggle" aria-expanded="false" aria-controls="github-panel" aria-label="Toggle GitHub activity">
                             <svg class="gh-mark" viewBox="0 0 16 16" aria-hidden="true">
-                                <!--long dtag's the github octocat SVG-->
+                                <!-- github octocat -->
                                 <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                             </svg>
                         </a>
                         <a href="https://github.com/labartist" target="_blank" rel="noopener">Github</a>
                     </span>
                     <span class="dot"></span>
-                    <a href="https://linkedin.com/in/gary-ramli-032825149/" target="_blank" rel="noopener">LinkedIn</a>
+                    <span class="gh-link-wrap">
+                        <a href="#linkedin" class="gh-toggle" id="li-toggle" aria-expanded="false" aria-controls="linkedin-panel" aria-label="Toggle LinkedIn about">
+                            <svg class="gh-mark" viewBox="0 0 16 16" aria-hidden="true">
+                                <!-- linkedin "in" mark -->
+                                <path fill="currentColor" d="M14.82 0H1.18C.53 0 0 .52 0 1.16v13.68C0 15.48.53 16 1.18 16h13.64c.65 0 1.18-.52 1.18-1.16V1.16C16 .52 15.47 0 14.82 0zM4.75 13.65H2.37V5.98h2.38v7.67zM3.56 4.94a1.38 1.38 0 110-2.76 1.38 1.38 0 010 2.76zm10.09 8.71h-2.37V9.9c0-.9-.02-2.07-1.26-2.07-1.27 0-1.46.99-1.46 2v3.82H6.2V5.98h2.28v1.05h.03c.32-.6 1.09-1.24 2.24-1.24 2.4 0 2.84 1.58 2.84 3.63v4.23z"/>
+                            </svg>
+                        </a>
+                        <a href="https://linkedin.com/in/gary-ramli-032825149/" target="_blank" rel="noopener">LinkedIn</a>
+                    </span>
                     <span class="dot"></span>
-                    <a href="https://www.parklane-furniture.com/" target="_blank" rel="noopener">Parklane</a>
+                    <span class="gh-link-wrap">
+                        <a href="#parklane" class="gh-toggle" id="pk-toggle" aria-expanded="false" aria-controls="parklane-panel" aria-label="Toggle Parklane showcase">
+                            <img class="pk-mark" src="https://www.parklane-furniture.com/favicon.ico" alt="" aria-hidden="true">
+                        </a>
+                        <a href="https://www.parklane-furniture.com/" target="_blank" rel="noopener">Parklane</a>
+                    </span>
                 </nav>
                 <div class="github-panel" id="github-panel">
                     <div class="github-panel-inner">
                         <div class="github-heatmap" id="github-heatmap"></div>
+                    </div>
+                </div>
+                <div class="github-panel" id="linkedin-panel">
+                    <div class="github-panel-inner">
+                        <div class="linkedin-about">
+                            <p class="li-headline">Ex-SWE, now running the family business</p>
+                            <p class="li-bio">An internationally experienced Computer Science major with a knack for all things software — machine learning, web design, distributed systems, or data science.</p>
+                            <p class="li-bio">Currently into &#127934 & &#129495.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="github-panel wide-panel" id="parklane-panel">
+                    <div class="github-panel-inner">
+                        <div class="showcase-track">
+                            <a href="https://www.parklane-furniture.com/collections/carlton-alu" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcarlton-alu%2Fmain.jpg&w=640&q=75" alt="Carlton" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Carlton</span>
+                                <span class="showcase-type">Wicker & Aluminium / Teak</span>
+                            </a>
+                            <a href="https://www.parklane-furniture.com/collections/cairo-teak" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcairo-teak%2Fmain.jpg&w=640&q=75" alt="Cairo" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Cairo</span>
+                                <span class="showcase-type">Rope & Teak</span>
+                            </a>
+                            <a href="https://www.parklane-furniture.com/collections/irving" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Firving%2Fmain.jpg&w=640&q=75" alt="Irving" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Irving</span>
+                                <span class="showcase-type">Wicker & Aluminium</span>
+                            </a>
+                            <a href="https://www.parklane-furniture.com/collections/rodeo" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Frodeo%2Fmain.jpg&w=640&q=75" alt="Rodeo" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Rodeo</span>
+                                <span class="showcase-type">Rope & Aluminium</span>
+                            </a>
+                            <a href="https://www.parklane-furniture.com/collections/lorenza" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Florenza%2Fmain.jpg&w=640&q=75" alt="Lorenza" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Lorenza</span>
+                                <span class="showcase-type">Rope & Teak</span>
+                            </a>
+                            <a href="https://www.parklane-furniture.com/collections/peralta" target="_blank" rel="noopener" class="showcase-card">
+                                <div class="showcase-img">
+                                    <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fperalta%2Fmain.jpg&w=640&q=75" alt="Peralta" loading="lazy">
+                                </div>
+                                <span class="showcase-name">Peralta</span>
+                                <span class="showcase-type">Rope & Teak</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -71,82 +140,24 @@
             <span class="context-weather" id="weather">&mdash;</span>
         </section>
 
-        <details class="vitals dropdown fade-in delay-3" open>
-            <summary class="dropdown-toggle">
-                <span class="dropdown-label">Daily Vitals</span>
-                <span class="dropdown-arrow"></span>
-            </summary>
-            <div class="dropdown-content">
-                <div class="vitals-grid">
-                    <div class="vital-card">
-                        <span class="vital-label">Steps</span>
-                        <span class="vital-value" id="steps">&mdash;</span>
-                    </div>
-                    <div class="vital-card">
-                        <span class="vital-label">Distance</span>
-                        <span class="vital-value" id="distance">&mdash;</span>
-                    </div>
-                    <div class="vital-card">
-                        <span class="vital-label">Calories</span>
-                        <span class="vital-value" id="calories">&mdash;</span>
-                    </div>
+        <section class="vitals fade-in delay-3">
+            <span class="vitals-heading">Daily Vitals</span>
+            <div class="vitals-grid">
+                <div class="vital-card">
+                    <span class="vital-label">Steps</span>
+                    <span class="vital-value" id="steps">&mdash;</span>
                 </div>
-                <div class="vitals-trend" id="vitals-trend"></div>
+                <div class="vital-card">
+                    <span class="vital-label">Distance</span>
+                    <span class="vital-value" id="distance">&mdash;</span>
+                </div>
+                <div class="vital-card">
+                    <span class="vital-label">Calories</span>
+                    <span class="vital-value" id="calories">&mdash;</span>
+                </div>
             </div>
-        </details>
-        <details class="showcase dropdown fade-in delay-3">
-            <summary class="dropdown-toggle">
-                <span class="dropdown-label">Parklane Collections Showcase</span>
-                <span class="dropdown-arrow"></span>
-            </summary>
-            <div class="dropdown-content">
-            <div class="showcase-track">
-                <a href="https://www.parklane-furniture.com/collections/carlton-alu" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcarlton-alu%2Fmain.jpg&w=640&q=75" alt="Carlton" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Carlton</span>
-                    <span class="showcase-type">Wicker & Aluminium / Teak</span>
-                </a>
-                <a href="https://www.parklane-furniture.com/collections/cairo-teak" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fcairo-teak%2Fmain.jpg&w=640&q=75" alt="Cairo" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Cairo</span>
-                    <span class="showcase-type">Rope & Teak</span>
-                </a>
-                <a href="https://www.parklane-furniture.com/collections/irving" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Firving%2Fmain.jpg&w=640&q=75" alt="Irving" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Irving</span>
-                    <span class="showcase-type">Wicker & Aluminium</span>
-                </a>
-                <a href="https://www.parklane-furniture.com/collections/rodeo" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Frodeo%2Fmain.jpg&w=640&q=75" alt="Rodeo" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Rodeo</span>
-                    <span class="showcase-type">Rope & Aluminium</span>
-                </a>
-                <a href="https://www.parklane-furniture.com/collections/lorenza" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Florenza%2Fmain.jpg&w=640&q=75" alt="Lorenza" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Lorenza</span>
-                    <span class="showcase-type">Rope & Teak</span>
-                </a>
-                <a href="https://www.parklane-furniture.com/collections/peralta" target="_blank" rel="noopener" class="showcase-card">
-                    <div class="showcase-img">
-                        <img src="https://www.parklane-furniture.com/_next/image?url=%2Fimages%2Fproducts%2Fperalta%2Fmain.jpg&w=640&q=75" alt="Peralta" loading="lazy">
-                    </div>
-                    <span class="showcase-name">Peralta</span>
-                    <span class="showcase-type">Rope & Teak</span>
-                </a>
-            </div>
-            </div>
-        </details>
-
+            <div class="vitals-trend" id="vitals-trend"></div>
+        </section>
         <footer class="colophon fade-in delay-3">
             <p>Built with <a href="https://globe.gl" target="_blank" rel="noopener">globe.gl</a> · <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · Powered by <a href="https://www.apple.com/health/" target="_blank" rel="noopener">Apple Health</a> · Hosted on <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a></p>
         </footer>

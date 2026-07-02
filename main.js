@@ -722,6 +722,27 @@ setInterval(() => {
         .catch(() => {});
 }, 5 * 60 * 1000);
 
+// ── Hero panel accordion (GitHub / LinkedIn / Parklane) ──────────────
+// Opening one of the three hero reveals closes any other that's open.
+const _heroPanels = [];
+function registerHeroPanel(toggle, panel, onOpen) {
+    _heroPanels.push(panel);
+    toggle.addEventListener('click', e => {
+        e.preventDefault();
+        const willOpen = !panel.classList.contains('open');
+        _heroPanels.forEach(p => {
+            if (p !== panel) {
+                p.classList.remove('open');
+                const t = document.querySelector(`[aria-controls="${p.id}"]`);
+                if (t) t.setAttribute('aria-expanded', 'false');
+            }
+        });
+        panel.classList.toggle('open', willOpen);
+        toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        if (willOpen && onOpen) onOpen();
+    });
+}
+
 // ── GitHub activity heatmap (lazy — loads only when the Github link is opened) ──
 (() => {
     const toggle = document.getElementById('gh-toggle');
@@ -822,13 +843,24 @@ setInterval(() => {
         }
     }
 
-    toggle.addEventListener('click', e => {
-        e.preventDefault();
-        const open = panel.classList.toggle('open');
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (open) loadHeatmap();
-    });
+    registerHeroPanel(toggle, panel, () => loadHeatmap());
 
     // Preload on page load so the heatmap is ready the instant the panel opens
     loadHeatmap();
+})();
+
+// ── LinkedIn about panel ──────────────────────────────
+(() => {
+    const toggle = document.getElementById('li-toggle');
+    const panel = document.getElementById('linkedin-panel');
+    if (!toggle || !panel) return;
+    registerHeroPanel(toggle, panel);
+})();
+
+// ── Parklane showcase panel (carousel now lives here, under the icon) ──
+(() => {
+    const toggle = document.getElementById('pk-toggle');
+    const panel = document.getElementById('parklane-panel');
+    if (!toggle || !panel) return;
+    registerHeroPanel(toggle, panel);
 })();

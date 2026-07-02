@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
+:root {
+    /* Single dial for the hero icon hover/active highlight — change this one
+       value to re-tint every icon's glow (SVG color + Parklane drop-shadow). */
+    --icon-glow: #aa9fc6;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -78,6 +84,7 @@ main {
 }
 
 .hero-intro {
+    width: 100%;
     margin-bottom: 1rem;
 }
 
@@ -177,28 +184,41 @@ h1 {
 
 .gh-toggle {
     cursor: pointer;
-}
-
-.gh-ext {
-    color: #555 !important;
-    font-size: 0.7rem;
-    line-height: 1;
-    text-decoration: none;
+    color: #555;
     transition: color 0.3s ease;
 }
 
-.gh-ext::after {
-    content: none !important; /* skip the underline animation on the icon */
+.gh-toggle::after {
+    content: none !important; /* icons never get the underline animation */
 }
 
-.gh-ext:hover {
-    color: #aa9fc6 !important;
+/* scoped under .social-links so hover beats `.social-links a:hover` (0,3,1 > 0,2,1) */
+.social-links a.gh-toggle:hover,
+.social-links a.gh-toggle[aria-expanded="true"] {
+    color: var(--icon-glow); /* --icon-glow highlight on hover AND while the panel is open */
 }
 
 .gh-mark {
     display: block;
     width: 12px;
     height: 12px;
+}
+
+.pk-mark {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    object-fit: contain;
+    filter: brightness(0.45) saturate(0.85); /* dimmed at rest — raise brightness() to lighten */
+    transition: filter 0.3s ease;
+}
+
+.gh-toggle:hover .pk-mark,
+.gh-toggle[aria-expanded="true"] .pk-mark {
+    /* brightens a little + a real glow (drop-shadow) tinted with --icon-glow,
+       so the raster favicon gets the same "lit up" feel as the SVG icons */
+    filter: brightness(0.8) saturate(0.95) drop-shadow(0 0 4px var(--icon-glow));
 }
 
 .github-panel {
@@ -210,6 +230,11 @@ h1 {
     margin: 0 auto;
     transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.3s ease, margin-top 0.4s ease;
+}
+
+/* Parklane reveal holds the full-width carousel — no narrow cap */
+.github-panel.wide-panel {
+    max-width: none;
 }
 
 .github-panel.open {
@@ -252,6 +277,29 @@ h1 {
 .github-err {
     font-size: 0.65rem;
     color: #555;
+}
+
+/* LinkedIn about panel */
+.linkedin-about {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+}
+
+.li-headline {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ececf0;
+    letter-spacing: 0.01em;
+}
+
+.li-bio {
+    font-size: 0.7rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: #8a8a95;
 }
 
 /* Context bar — time & weather */
@@ -369,9 +417,25 @@ summary.dropdown-toggle::marker {
     overflow: hidden;
 }
 
-/* Vitals */
+/* Vitals — plain always-on section (no dropdown) */
+.vitals {
+    width: 100%;
+    text-align: center;
+    padding: 1rem 0 0;
+}
+
+.vitals-heading {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
 .vitals .vitals-grid {
-    padding: 1rem 0;
+    padding: 0;
 }
 
 .vitals-grid {
@@ -412,7 +476,7 @@ summary.dropdown-toggle::marker {
     gap: 0.55rem;
     width: 100%;
     max-width: 280px;
-    margin: 2.75rem auto 0;
+    margin: 1.25rem auto 0;
     opacity: 0;
     animation: sparkFade 0.6s ease 0.2s forwards;
 }
@@ -602,7 +666,8 @@ summary.dropdown-toggle::marker {
 
 /* Footer colophon */
 .colophon {
-    padding: 2rem 0 3rem;
+    padding: 3.5rem 0 1.5rem;
+    /* margin-top: 32px; */
     text-align: center;
 }
 
