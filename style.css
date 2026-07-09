@@ -717,16 +717,11 @@ summary.dropdown-toggle::marker {
     z-index: 2;
 }
 
-.replay-trail {
+.replay-trail-canvas {
     position: absolute;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(190,205,245,0.6) 45%, rgba(169,184,232,0.25) 72%, transparent 86%);
-    box-shadow: 0 0 6px 1px rgba(180,200,255,0.45);
+    top: 0;
+    left: 0;
     pointer-events: none;
-    transform: translate(-50%, -50%);
-    opacity: 0;
     z-index: 2;
 }
 

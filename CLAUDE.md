@@ -65,9 +65,22 @@ reveal panel system.
   "Current location" for the live pin.
 - **Auto-spin** — pauses while dragging/hovering the globe, eases back up to
   speed ~0.5s after 3s of stillness (`updateAutoSpin()` in the `trackPin` loop).
-- **Guided-replay comet** — built but parked on branch `guided-replay-comet`
-  (not merged). Flies the journey chronologically with a meteor-style trail;
-  needs another polish pass (trail/color) before shipping.
+- **Guided-replay comet** — in progress on branch `guided-replay-comet` (not
+  merged; repo may be checked out on it during polish). Flies the journey
+  chronologically. The trail is a **canvas overlay** (`.replay-trail-canvas`,
+  DPR-aware, sized from the globe's WebGL canvas because globe.gl's wrapper
+  div is 0×0): exact Bézier positions are buffered with timestamps
+  (`trailHistory`) and resampled uniformly over the last `TRAIL_MS`, drawn as
+  one tapered two-pass stroke (soft periwinkle glow + bright core, `lighter`
+  compositing) — continuous at any speed (the old DOM-dot trail tore into
+  visible dots on fast legs), flows across leg boundaries, and eases into a
+  city during the arrival hold. Far-side culling is altitude-aware
+  (`horizonAngle()` = 90° + acos(1/(1+alt)) — a raised arc stays visible past
+  the horizon). Arrival popup (`.replay-label`) shows at every stop, Jakarta
+  included. Tuning dials in main.js: `TRAIL_MS` (tail length), `TRAIL_SAMPLES`,
+  the `fade*fade` alpha curve + `rgba` peaks in the stroke loop, and
+  `COMET_HOLD_MS` / `COMET_LEG_BASE_MS` / `COMET_LEG_DIST_MS` (pacing).
+  Respects `prefers-reduced-motion` (comet off).
 
 ## Hero reveal panels (GitHub / LinkedIn / Parklane)
 
@@ -139,7 +152,11 @@ Run through `CHECKLIST.md` after non-trivial changes.
   for interactive behavior (this preview environment's screenshot/resize tools
   have shown flakiness with multi-panel click state; direct DOM `.click()` +
   computed-style checks are more reliable for logic verification, but Gary's
-  own click-through is the real test).
+  own click-through is the real test). ⚠️ The preview tab sometimes loads
+  **hidden** (`document.visibilityState === 'hidden'`, even `innerWidth: 0`)
+  — `requestAnimationFrame` never fires there, so *any* animation (globe
+  spin, comet, trail) reads as dead/0 in eval probes. Check `visibilityState`
+  before concluding an animation is broken.
 - Main branch: `master`. Vercel auto-deploys on push. Repo is **public** — no
   secrets belong in the repo itself (env vars only).
 - Check `git fetch && git log origin/master` before starting new work — other
@@ -147,7 +164,9 @@ Run through `CHECKLIST.md` after non-trivial changes.
 
 ## Known open branches (not merged)
 
-- `guided-replay-comet` — the parked comet feature (see above).
+- `guided-replay-comet` — the comet feature, actively being polished (see
+  Globe behavior above). Rebased onto master; canvas-trail rework done, Gary
+  tuning the trail/pacing dials before merge.
 - `vercel/vercel-web-analytics-integrati-w4sum0` — unmerged Vercel Web
   Analytics integration; finish or delete.
 - Assorted `dependabot/*` branches — routine dependency bump PRs.
@@ -156,5 +175,6 @@ Run through `CHECKLIST.md` after non-trivial changes.
 
 - **About / Projects section** — LinkedIn panel now covers a short bio; a
   fuller Projects section is still open if Gary wants one.
-- **Guided-replay comet** — parked branch, needs a polish pass.
+- **Guided-replay comet** — branch active, trail reworked; merge once Gary
+  signs off on the tuning.
 - **Vercel Web Analytics** — open branch, decide finish vs. drop.
