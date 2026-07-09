@@ -702,6 +702,60 @@ summary.dropdown-toggle::marker {
     z-index: 1;
 }
 
+/* Guided-replay comet + trail + arrival label */
+.replay-comet {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, #cdd6f4 50%, rgba(169,184,232,0.4) 75%, transparent 85%);
+    box-shadow: 0 0 7px 2px rgba(180,200,255,0.5);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: 2;
+}
+
+.replay-trail-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.replay-label {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 12px));
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: rgba(8, 8, 12, 0.9);
+    border: 1px solid #2a2a33;
+    border-radius: 7px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 3;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.replay-label-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #ececf0;
+    letter-spacing: 0.01em;
+}
+
+.replay-label-date {
+    font-size: 0.55rem;
+    font-weight: 400;
+    color: #8a8a95;
+}
+
 /* Globe hover tooltip (city + date) — strip globe.gl's default wrapper box */
 .float-tooltip-kap {
     background: transparent !important;
