@@ -1087,6 +1087,7 @@ function registerHeroPanel(toggle, panel, onOpen) {
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         status.textContent = ''; // fresh card every toggle — no stale words
         if (open) document.getElementById('contact-subject').focus();
+        else toggle.blur(); // release focus so the label reverts to grey
     });
 
     card.addEventListener('submit', async e => {

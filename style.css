@@ -704,7 +704,14 @@ h1 {
     text-shadow: 0 0 12px #000000, 0 0 12px #000000, 0 1px 12px #000000, 1px 0 12px #000000;
 }
 
-.contact-toggle:hover,
+/* hover gated to real-hover devices — touch taps otherwise leave the
+   :hover state stuck (button stays purple after closing) */
+@media (hover: hover) {
+    .contact-toggle:hover {
+        color: var(--icon-glow);
+    }
+}
+
 .contact-toggle[aria-expanded="true"] {
     color: var(--icon-glow);
 }
