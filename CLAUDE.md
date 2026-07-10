@@ -26,6 +26,7 @@ reveal panel system.
 | `main.js` | Globe + travel trail + auto-tracking, vitals/weather/time fetch, hero-panel accordion animations, carousel drag-to-scroll, GitHub heatmap |
 | `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (last 14 days), and appends distance-deduped stops to `location_history` (last 10) |
 | `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` + `location_history` (60s cache), returns `{...vitals, history, locations}` |
+| `api/contact.js` | `POST /api/contact` — public enquiry box; honeypot + per-IP rate limit (1/min) + length caps; stores to KV list `enquiries` (newest first, cap 50; read in the Upstash data browser) and forwards to the inbox via Resend when `RESEND_API_KEY`/`CONTACT_EMAIL` are set (best-effort — KV write is the source of truth) |
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
 | `og-image.png` | 1200×630 social share card (generated, dark themed) |
 | `CHECKLIST.md` | Manual verification checklist (run through after any change) |
@@ -45,10 +46,13 @@ reveal panel system.
    appended onto the curated 2026 trail as new dots + arcs.
 
 **KV keys:** `vitals` (latest snapshot), `vitals_history` (daily snapshots),
-`location_history` (deduped travel stops), `last_update_time` (rate-limit guard).
+`location_history` (deduped travel stops), `last_update_time` (rate-limit guard),
+`enquiries` (contact-form messages), `contact_rl:<ip>` (contact rate-limit, 60s TTL).
 
 **Env vars (Vercel):** `AUTH_KEY` (shared secret with the iOS Shortcut) + the
-`KV_*` connection vars (auto-injected by the Vercel KV integration).
+`KV_*` connection vars (auto-injected by the Vercel KV integration) +
+`RESEND_API_KEY`/`CONTACT_EMAIL` (optional — email forwarding for enquiries;
+without them enquiries only land in KV).
 
 ## Globe behavior (main.js)
 
@@ -120,16 +124,17 @@ scoping if you touch it.
 
 - **Reveal panels** (`.github-panel`) — the live accordion, plain `<div>`s
   driven by `registerHeroPanel()`, animated open/closed via a grid-rows slide
-  (`grid-template-rows: 0fr → 1fr`). Opening one closes the others.
-- **Dropdowns** (`.dropdown` / `.dropdown-toggle` / `.dropdown-content`) — the
-  older `<details>`/`<summary>` pattern (same grid-rows slide, native marker
-  hidden, custom rotating arrow). ⚠️ Currently **dormant** — no live instances
-  (Daily Vitals became a plain section, the Parklane showcase moved to a reveal
-  panel). CSS + the `.dropdown` JS loop are kept for reuse; the loop is a no-op
-  until a `.dropdown` element exists again.
+  (`grid-template-rows: 0fr → 1fr`). Opening one closes the others. (The old
+  `<details>`-based `.dropdown` pattern was fully deleted once nothing used it
+  — resurrect from git history if ever needed.)
 - **Daily Vitals** — plain always-on `<section class="vitals">` (static
   `DAILY VITALS` heading → steps/distance/calories grid → weekly trend chart),
   no longer collapsible.
+- **Contact corner** — fixed bottom-right `CONTACT` toggle (dark text-shadow
+  halo for legibility over content) + compact enquiry card (subject/message/
+  reply email, honeypot field). POSTs to `/api/contact`; the email address
+  appears nowhere in the page. Card animates via opacity/translate (not
+  display), status text auto-clears.
 - **Labels** — uppercase, letter-spaced, `#666` weight 600.
 - **Carousel** — horizontal scroll-snap track, drag-to-scroll (a real drag
   suppresses the card link click; native link/image drag is blocked).
@@ -169,19 +174,20 @@ Run through `CHECKLIST.md` after non-trivial changes.
 - Check `git fetch && git log origin/master` before starting new work — other
   sessions (e.g. iOS Claude) may have pushed/merged PRs directly.
 
-## Known open branches (not merged)
+## Branches
 
-- `guided-replay-comet` — the comet feature, actively being polished (see
-  Globe behavior above). Rebased onto master; canvas-trail rework done, Gary
-  tuning the trail/pacing dials before merge.
-- `vercel/vercel-web-analytics-integrati-w4sum0` — unmerged Vercel Web
-  Analytics integration; finish or delete.
-- Assorted `dependabot/*` branches — routine dependency bump PRs.
+Only `master` — everything is merged and stale branches were purged (2026-07).
+If a `vercel/*` branch appears, it's the Vercel dashboard's agent auto-generating
+an "integration" PR — those over-engineer (npm + Vite on a no-build site); prefer
+implementing the one-liner ourselves and deleting the bot branch.
 
 ## Roadmap / parked ideas
 
-- **About / Projects section** — LinkedIn panel now covers a short bio; a
-  fuller Projects section is still open if Gary wants one.
-- **Guided-replay comet** — branch active, trail reworked; merge once Gary
-  signs off on the tuning.
-- **Vercel Web Analytics** — open branch, decide finish vs. drop.
+- **Comet limb bug** — the open issue above (comet visible behind the globe
+  near the edge); try a real depth test next.
+- **Projects showcase** — Experience now lives in the LinkedIn panel; a
+  separate projects/cards section is still open if Gary wants one.
+- **OG image refresh** — `og-image.png` predates the reveal panels/experience
+  section; regenerate if sharing matters.
+- **Enquiry notifications beyond email** — Resend forwarding is wired; an iOS
+  Shortcut poll of an authed enquiries endpoint is a possible alternative.

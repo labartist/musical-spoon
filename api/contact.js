@@ -34,6 +34,28 @@ export default async function handler(req, res) {
 		await kv.lpush('enquiries', JSON.stringify({ subject: s, message: m, reply: r, at: new Date().toISOString() }));
 		await kv.ltrim('enquiries', 0, MAX_ENQUIRIES - 1);
 
+		// Forward to the inbox via Resend when configured (RESEND_API_KEY +
+		// CONTACT_EMAIL env vars). Best-effort: the enquiry is already safe in
+		// KV, so a send failure must not fail the request.
+		if (process.env.RESEND_API_KEY && process.env.CONTACT_EMAIL) {
+			try {
+				await fetch('https://api.resend.com/emails', {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						from: 'garyramli.com <onboarding@resend.dev>',
+						to: [process.env.CONTACT_EMAIL],
+						reply_to: r,
+						subject: `[garyramli.com] ${s}`,
+						text: `${m}\n\n— reply to: ${r}`,
+					}),
+				});
+			} catch (e) { /* stored in KV regardless */ }
+		}
+
 		return res.status(200).json({ ok: true });
 	} catch (e) {
 		return res.status(500).json({ error: 'Something went wrong' });

@@ -1,52 +1,3 @@
-// ── Dropdown transitions ─────────────────────────────
-// Animate <details> open/close with CSS grid transition
-document.querySelectorAll('.dropdown').forEach(details => {
-    const content = details.querySelector('.dropdown-content');
-    const summary = details.querySelector('.dropdown-toggle');
-    let isAnimating = false;
-
-    // If already open on load, set inline styles to match
-    if (details.open) {
-        content.style.gridTemplateRows = '1fr';
-        content.style.opacity = '1';
-    }
-
-    summary.addEventListener('click', e => {
-        e.preventDefault();
-        if (isAnimating) return;
-
-        if (details.open) {
-            // Closing: animate first, then remove open
-            isAnimating = true;
-            content.style.gridTemplateRows = '0fr';
-            content.style.opacity = '0';
-            content.addEventListener('transitionend', function handler(ev) {
-                if (ev.propertyName === 'grid-template-rows') {
-                    details.open = false;
-                    isAnimating = false;
-                    content.removeEventListener('transitionend', handler);
-                }
-            });
-        } else {
-            // Opening: set collapsed state, open element, then animate
-            isAnimating = true;
-            content.style.gridTemplateRows = '0fr';
-            content.style.opacity = '0';
-            details.open = true;
-            // Force layout recalc so browser registers the 0fr state
-            content.offsetHeight;
-            content.style.gridTemplateRows = '1fr';
-            content.style.opacity = '1';
-            content.addEventListener('transitionend', function handler(ev) {
-                if (ev.propertyName === 'grid-template-rows') {
-                    isAnimating = false;
-                    content.removeEventListener('transitionend', handler);
-                }
-            });
-        }
-    });
-});
-
 // ── Carousel drag-to-scroll ──────────────────────────
 // Click-drag the showcase track to scroll it; a real drag suppresses the
 // card link click so dragging never opens a product page.
@@ -1159,7 +1110,7 @@ function registerHeroPanel(toggle, panel, onOpen) {
                 }),
             });
             if (!resp.ok) throw new Error((await resp.json()).error || 'failed');
-            status.textContent = 'Sent — I’ll get back to you';
+            status.textContent = 'Sent — I’ll get back to you!';
             card.reset();
             setTimeout(() => {
                 card.classList.remove('open');
