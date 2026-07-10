@@ -77,9 +77,34 @@
                 <div class="github-panel" id="linkedin-panel">
                     <div class="github-panel-inner">
                         <div class="linkedin-about">
-                            <p class="li-headline">Ex-SWE, now running the family business</p>
-                            <p class="li-bio">An internationally experienced Computer Science major with a knack for all things software — machine learning, web design, distributed systems, or data science.</p>
+                            <p class="li-headline">Ex-SDE, now running the family business</p>
+                            <p class="li-bio">An internationally experienced Computer Science major with a knack for all things software — be it machine learning, web design, distributed systems or data science.</p>
                             <p class="li-bio">Currently into &#127934 & &#129495.</p>
+                            <div class="li-divider"></div>
+                            <span class="work-heading">Experience</span>
+                            <div class="work-scroll">
+                                <div class="work-row">
+                                    <span class="work-when">2020 — now</span>
+                                    <div class="work-what">
+                                        <span class="work-role">Parklane Furniture</span>
+                                        <span class="work-line">PPIC · Outdoor Furniture Manufacturing</span>
+                                    </div>
+                                </div>
+                                <div class="work-row">
+                                    <span class="work-when">2018 — 2020</span>
+                                    <div class="work-what">
+                                        <span class="work-role">Accelya Revenue Management</span>
+                                        <span class="work-line">Software Engineer · Worked on AirRM, RailRM</span>
+                                    </div>
+                                </div>
+                                <div class="work-row">
+                                    <span class="work-when">2018</span>
+                                    <div class="work-what">
+                                        <span class="work-role">University of Washington</span>
+                                        <span class="work-line">BSc · Paul G. Allen School of CS &#x1F43A</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -160,10 +185,27 @@
             </div>
             <div class="vitals-trend" id="vitals-trend"></div>
         </section>
+
         <footer class="colophon fade-in delay-3">
             <p>Built with <a href="https://globe.gl" target="_blank" rel="noopener">globe.gl</a> · <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · Powered by <a href="https://www.apple.com/health/" target="_blank" rel="noopener">Apple Health</a> · Hosted on <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a></p>
         </footer>
     </main>
+
+    <!-- Contact corner — compact enquiry form, no email address exposed anywhere -->
+    <div class="contact-corner">
+        <form class="contact-card" id="contact-card" novalidate>
+            <input type="text" name="subject" id="contact-subject" placeholder="Subject" maxlength="120" autocomplete="off">
+            <textarea name="message" id="contact-message" placeholder="Message" maxlength="2000" rows="4"></textarea>
+            <input type="email" name="reply" id="contact-reply" placeholder="Your email (for the reply)" maxlength="120" autocomplete="email">
+            <!-- honeypot — hidden from humans; bots that fill it get silently dropped -->
+            <input type="text" name="website" id="contact-website" tabindex="-1" aria-hidden="true">
+            <div class="contact-actions">
+                <span class="contact-status" id="contact-status" aria-live="polite"></span>
+                <button type="submit" id="contact-send">Send</button>
+            </div>
+        </form>
+        <button class="contact-toggle" id="contact-toggle" aria-expanded="false" aria-controls="contact-card">Contact</button>
+    </div>
 
     <div class="gradient-orb orb-1"></div>
     <div class="gradient-orb orb-2"></div>

@@ -81,6 +81,13 @@ reveal panel system.
   the `fade*fade` alpha curve + `rgba` peaks in the stroke loop, and
   `COMET_HOLD_MS` / `COMET_LEG_BASE_MS` / `COMET_LEG_DIST_MS` (pacing).
   Respects `prefers-reduced-motion` (comet off).
+  ⚠️ **Open issue:** the comet/trail is still sometimes visible behind the
+  globe near the limb, even after switching `horizonAngle()` to the
+  camera-distance-aware formula (acos(1/d) + acos(1/(1+alt))). Parked at
+  Gary's request. Next things to try: verify `pointOfView().altitude` is the
+  value assumed (camera may sit closer than `1+alt` suggests after globe.gl's
+  auto-fit), or ditch the analytic check and depth-test against the WebGL
+  scene (e.g. raycast, or compare the point's projected depth to the sphere's).
 
 ## Hero reveal panels (GitHub / LinkedIn / Parklane)
 

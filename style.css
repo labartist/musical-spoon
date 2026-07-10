@@ -684,6 +684,206 @@ summary.dropdown-toggle::marker {
     transition: color 0.3s ease;
 }
 
+/* Work / experience — lives inside the LinkedIn panel, below the bio */
+#linkedin-panel {
+    max-width: 440px; /* bio reads fine narrow; the rows want more room */
+}
+
+.li-divider {
+    height: 1px;
+    background: #1a1a1f;
+    margin: 0.35rem 0;
+}
+
+.work-heading {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.work-scroll {
+    max-height: 260px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+/* only when the list actually overflows: bottom fade + room for it
+   (JS toggles .scrollable) — a short list keeps clean, even edges */
+.work-scroll.scrollable {
+    -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent);
+    mask-image: linear-gradient(to bottom, #000 88%, transparent);
+    padding-bottom: 1.25rem;
+}
+
+.work-row {
+    display: flex;
+    gap: 1.25rem;
+    align-items: baseline;
+}
+
+.work-when {
+    flex: 0 0 92px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: #444;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.work-what {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.work-role {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #c9c9d2;
+    letter-spacing: 0.01em;
+}
+
+.work-line {
+    font-size: 0.7rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #77777f;
+}
+
+/* Contact corner — compact enquiry box, bottom-right */
+.contact-corner {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.contact-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #555;
+    padding: 0.4rem 0.2rem;
+    transition: color 0.3s ease;
+}
+
+.contact-toggle:hover,
+.contact-toggle[aria-expanded="true"] {
+    color: var(--icon-glow);
+}
+
+.contact-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(270px, calc(100vw - 2.5rem));
+    padding: 0.75rem;
+    background: rgba(10, 10, 16, 0.75);
+    border: 1px solid #1a1a1f;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    /* closed: faded + slightly dropped; .open animates it in */
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.25s ease,
+                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.contact-card.open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+.contact-card input,
+.contact-card textarea {
+    background: #0e0e14;
+    border: 1px solid #1c1c22;
+    border-radius: 6px;
+    padding: 0.45rem 0.55rem;
+    font-family: inherit;
+    font-size: 0.7rem;
+    color: #d0d0d5;
+    outline: none;
+    resize: none;
+    transition: border-color 0.3s ease;
+}
+
+.contact-card input::placeholder,
+.contact-card textarea::placeholder {
+    color: #555;
+}
+
+.contact-card input:focus,
+.contact-card textarea:focus {
+    border-color: #33333d;
+}
+
+/* honeypot — visually gone, still in the DOM for bots */
+#contact-website {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.contact-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.contact-status {
+    font-size: 0.62rem;
+    color: #666;
+    letter-spacing: 0.02em;
+}
+
+.contact-card button[type="submit"] {
+    background: #16161d;
+    border: 1px solid #26262e;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #b9b9c2;
+    padding: 0.4rem 0.9rem;
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.contact-card button[type="submit"]:hover:not(:disabled) {
+    color: var(--icon-glow);
+    border-color: #33333d;
+}
+
+.contact-card button[type="submit"]:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .colophon a:hover {
     color: #707078;
 }

@@ -577,10 +577,13 @@ function bezierPoint(leg, t) {
     };
 }
 
-// A point at altitude stays visible past the 90° horizon — widen the far-side
-// cutoff accordingly (small margin so strokes don't clip through the limb).
+// True visibility horizon for a camera at finite distance: a surface point
+// hides at acos(1/d) from the view centre (~73° at the default zoom, NOT 90°),
+// while altitude extends visibility by acos(1/(1+alt)). Small margin so
+// strokes don't linger on the limb.
 function horizonAngle(alt) {
-    return Math.PI / 2 + Math.acos(1 / (1 + Math.max(0, alt))) - 0.03;
+    const d = 1 + (globe.pointOfView().altitude || 2.5); // camera distance in globe radii
+    return Math.acos(1 / d) + Math.acos(1 / (1 + Math.max(0, alt))) - 0.02;
 }
 
 const trailHistory = []; // recent exact path positions: {lat, lng, alt, t}
@@ -1108,4 +1111,66 @@ function registerHeroPanel(toggle, panel, onOpen) {
     const panel = document.getElementById('parklane-panel');
     if (!toggle || !panel) return;
     registerHeroPanel(toggle, panel);
+})();
+
+// ── Work list — fade + scroll affordance only when it actually overflows ──
+(() => {
+    const el = document.querySelector('.work-scroll');
+    if (!el) return;
+    const update = () => el.classList.toggle('scrollable', el.scrollHeight > el.clientHeight + 1);
+    update();
+    window.addEventListener('resize', update);
+})();
+
+// ── Contact corner — compact enquiry box, POSTs to /api/contact so no
+// email address ever appears on the page ──
+(() => {
+    const toggle = document.getElementById('contact-toggle');
+    const card = document.getElementById('contact-card');
+    if (!toggle || !card) return;
+    const status = document.getElementById('contact-status');
+    const send = document.getElementById('contact-send');
+
+    toggle.addEventListener('click', () => {
+        const open = card.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        status.textContent = ''; // fresh card every toggle — no stale words
+        if (open) document.getElementById('contact-subject').focus();
+    });
+
+    card.addEventListener('submit', async e => {
+        e.preventDefault();
+        const subject = document.getElementById('contact-subject').value.trim();
+        const message = document.getElementById('contact-message').value.trim();
+        const reply = document.getElementById('contact-reply').value.trim();
+        if (!subject || !message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reply)) {
+            status.textContent = 'All fields required';
+            return;
+        }
+        send.disabled = true;
+        status.textContent = 'Sending…';
+        try {
+            const resp = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject, message, reply,
+                    website: document.getElementById('contact-website').value, // honeypot
+                }),
+            });
+            if (!resp.ok) throw new Error((await resp.json()).error || 'failed');
+            status.textContent = 'Sent — I’ll get back to you';
+            card.reset();
+            setTimeout(() => {
+                card.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
+                status.textContent = '';
+                send.disabled = false;
+            }, 2200);
+        } catch (err) {
+            status.textContent = 'Couldn’t send — try later';
+            send.disabled = false;
+            setTimeout(() => { status.textContent = ''; }, 3000); // don't let the error linger
+        }
+    });
 })();
