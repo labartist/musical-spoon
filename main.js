@@ -1082,10 +1082,21 @@ function registerHeroPanel(toggle, panel, onOpen) {
     const status = document.getElementById('contact-status');
     const send = document.getElementById('contact-send');
 
+    // Swap the status text with a slide-up entrance; restart the animation
+    // even when a message replaces another (class removal alone won't retrigger)
+    function setStatus(text) {
+        status.textContent = text;
+        status.classList.remove('pop');
+        if (text) {
+            void status.offsetWidth; // flush so re-adding .pop restarts the keyframes
+            status.classList.add('pop');
+        }
+    }
+
     toggle.addEventListener('click', () => {
         const open = card.classList.toggle('open');
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        status.textContent = ''; // fresh card every toggle — no stale words
+        setStatus(''); // fresh card every toggle — no stale words
         if (open) document.getElementById('contact-subject').focus();
         else toggle.blur(); // release focus so the label reverts to grey
     });
@@ -1096,11 +1107,11 @@ function registerHeroPanel(toggle, panel, onOpen) {
         const message = document.getElementById('contact-message').value.trim();
         const reply = document.getElementById('contact-reply').value.trim();
         if (!subject || !message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reply)) {
-            status.textContent = 'All fields required';
+            setStatus('All fields required');
             return;
         }
         send.disabled = true;
-        status.textContent = 'Sending…';
+        setStatus('Sending…');
         try {
             const resp = await fetch('/api/contact', {
                 method: 'POST',
@@ -1111,18 +1122,18 @@ function registerHeroPanel(toggle, panel, onOpen) {
                 }),
             });
             if (!resp.ok) throw new Error((await resp.json()).error || 'failed');
-            status.textContent = 'Sent — I’ll get back to you!';
+            setStatus('Sent — I’ll get back to you!');
             card.reset();
             setTimeout(() => {
                 card.classList.remove('open');
                 toggle.setAttribute('aria-expanded', 'false');
-                status.textContent = '';
+                setStatus('');
                 send.disabled = false;
             }, 2200);
         } catch (err) {
-            status.textContent = 'Couldn’t send — try later';
+            setStatus('Couldn’t send — try later');
             send.disabled = false;
-            setTimeout(() => { status.textContent = ''; }, 3000); // don't let the error linger
+            setTimeout(() => { setStatus(''); }, 3000); // don't let the error linger
         }
     });
 })();

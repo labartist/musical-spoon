@@ -786,6 +786,20 @@ h1 {
     letter-spacing: 0.02em;
 }
 
+/* Incoming status message — rises into place like the card itself opening */
+.contact-status.pop {
+    animation: status-in 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes status-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .contact-status.pop { animation: none; }
+}
+
 .contact-card button[type="submit"] {
     background: #16161d;
     border: 1px solid #26262e;
