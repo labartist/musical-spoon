@@ -1,5 +1,20 @@
 import { kv } from '@vercel/kv';
 
+// The Health "day" a push belongs to. Apple Health buckets daily totals by the
+// *device's* midnight, so prefer an explicit date or IANA timezone sent by the
+// iOS Shortcut; fall back to Jakarta (home) when neither is present.
+function resolveDay(body) {
+	const date = body && body.date;
+	if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+	const tz = body && body.tz;
+	if (typeof tz === 'string' && tz) {
+		try {
+			return new Date().toLocaleDateString('en-CA', { timeZone: tz });
+		} catch (e) { /* unknown timezone name — fall through to home */ }
+	}
+	return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+}
+
 // Great-circle distance in km — used to de-dupe location pings into real "stops"
 function haversineKm(la1, lo1, la2, lo2) {
 	const R = 6371, r = d => d * Math.PI / 180;
@@ -47,9 +62,12 @@ export default async function handler(req, res) {
 		await kv.set('last_update_time', now);
 
 		// Daily history for sparklines — best-effort, never break the main update.
-		// One entry per Jakarta day; later pushes overwrite (steps accumulate).
+		// One entry per device-local day (see resolveDay). Daily totals only ever
+		// grow, so same-day merges take the per-metric max — a stale push (phone
+		// not yet synced with the Watch) or a post-midnight ~0 reset landing on
+		// the previous day's row (device ahead of Jakarta) can't wipe real data.
 		try {
-			const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+			const today = resolveDay(req.body);
 			let history = (await kv.get('vitals_history')) || [];
 			const entry = {
 				date: today,
@@ -58,7 +76,18 @@ export default async function handler(req, res) {
 				calories: data.calories,
 			};
 			const idx = history.findIndex(h => h.date === today);
-			if (idx >= 0) history[idx] = entry; else history.push(entry);
+			if (idx >= 0) {
+				const prev = history[idx];
+				history[idx] = {
+					date: today,
+					steps: Math.max(Number(prev.steps) || 0, entry.steps),
+					distance: Math.max(Number(prev.distance) || 0, entry.distance),
+					calories: Math.max(Number(prev.calories) || 0, entry.calories),
+				};
+			} else {
+				history.push(entry);
+			}
+			history.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 			history = history.slice(-14); // keep ~2 weeks
 			await kv.set('vitals_history', history);
 		} catch (e) {
