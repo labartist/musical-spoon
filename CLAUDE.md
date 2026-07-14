@@ -134,7 +134,10 @@ scoping if you touch it.
   halo for legibility over content) + compact enquiry card (subject/message/
   reply email, honeypot field). POSTs to `/api/contact`; the email address
   appears nowhere in the page. Card animates via opacity/translate (not
-  display), status text auto-clears.
+  display), status text auto-clears. Status messages ("Sending…", "Sent — …",
+  errors) enter with a slide-up/fade (`setStatus()` in main.js re-adds
+  `.contact-status.pop` after a reflow flush so every message retriggers the
+  keyframes; disabled under `prefers-reduced-motion`).
 - **Labels** — uppercase, letter-spaced, `#666` weight 600.
 - **Carousel** — horizontal scroll-snap track, drag-to-scroll (a real drag
   suppresses the card link click; native link/image drag is blocked).
