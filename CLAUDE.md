@@ -140,12 +140,17 @@ scoping if you touch it.
   display), status text auto-clears. Status messages ("Sending…", "Sent — …",
   errors) enter with a slide-up/fade (`setStatus()` in main.js re-adds
   `.contact-status.pop` after a reflow flush so every message retriggers the
-  keyframes; disabled under `prefers-reduced-motion`).
+  keyframes; disabled under `prefers-reduced-motion`). ⚠️ `.contact-corner`
+  is `pointer-events: none` — its box silently spans the closed card's full
+  size over the bottom of the page (it blocked the trend chart's taps on
+  phones); only the toggle and the `.open` card re-enable pointer events.
+  Keep that if you add children to the corner.
 - **Labels** — uppercase, letter-spaced, `#666` weight 600.
 - **Carousel** — horizontal scroll-snap track, drag-to-scroll (a real drag
   suppresses the card link click; native link/image drag is blocked).
 - **Trend chart** — weekly steps/distance/calories overlay under Daily Vitals,
-  hover for a per-day tooltip (pinch-zoom aware, same as the GitHub tooltip).
+  hover/tap for a per-day tooltip (pinch-zoom aware and edge-clamped, same as
+  the GitHub tooltip).
 
 ## Local preview
 

@@ -686,6 +686,15 @@ h1 {
     flex-direction: column;
     align-items: flex-end;
     gap: 0.5rem;
+    /* The container's box spans the closed card's full size (~270px wide) over
+       page content near the bottom — the vitals trend chart on phones. Only the
+       real controls may catch input: the toggle re-enables below, the card when
+       it gets .open. Without this the invisible box eats the chart's taps. */
+    pointer-events: none;
+}
+
+.contact-corner .contact-toggle {
+    pointer-events: auto;
 }
 
 .contact-toggle {
