@@ -774,11 +774,15 @@ function renderTrend(history) {
         const h = recent[i];
         tip.innerHTML = `<span class="trend-tip-date">${fmtTrendDate(h.date)}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
+        tip.classList.add('show'); // show first so the tip has measurable dimensions
         const sRect = svgEl.getBoundingClientRect();
         const vp = visualViewportBox(); // convert to layout coords so it stays put when pinch-zoomed
-        tip.style.left = (sRect.left + (x / TREND_W) * sRect.width + vp.left) + 'px';
+        // Anchor over the day, clamped on-screen so edge points stay readable (same as the heatmap tip)
+        const TIP_PAD = 8;
+        const half = tip.getBoundingClientRect().width / 2;
+        const rawX = sRect.left + (x / TREND_W) * sRect.width + vp.left;
+        tip.style.left = Math.max(vp.left + TIP_PAD + half, Math.min(rawX, vp.left + vp.width - TIP_PAD - half)) + 'px';
         tip.style.top = (sRect.top + vp.top) + 'px';
-        tip.classList.add('show');
     }
     function hide() {
         guideEl.setAttribute('opacity', '0');
