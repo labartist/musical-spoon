@@ -28,7 +28,7 @@ reveal panel system.
 | `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` + `location_history` (60s cache), returns `{...vitals, history, locations}` |
 | `api/contact.js` | `POST /api/contact` — public enquiry box; honeypot + per-IP rate limit (1/min) + length caps; stores to KV list `enquiries` (newest first, cap 50; read in the Upstash data browser) and forwards to the inbox via Resend when `RESEND_API_KEY`/`CONTACT_EMAIL` are set (best-effort — KV write is the source of truth) |
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
-| `og-image.png` | 1200×630 social share card (generated, dark themed) |
+| `og-image.png` | 1200×630 social share card (generated, dark themed). All text sits in the center ~830px so platform crops (e.g. LinkedIn Featured, ~1.32:1) can't cut it — keep new text inside that safe zone if regenerating |
 | `CHECKLIST.md` | Manual verification checklist (run through after any change) |
 
 ## Data flow
@@ -198,7 +198,8 @@ implementing the one-liner ourselves and deleting the bot branch.
   near the edge); try a real depth test next.
 - **Projects showcase** — Experience now lives in the LinkedIn panel; a
   separate projects/cards section is still open if Gary wants one.
-- **OG image refresh** — `og-image.png` predates the reveal panels/experience
-  section; regenerate if sharing matters.
+- ~~OG image refresh~~ — regenerated 2026-07 with a crop-safe centered layout
+  (LinkedIn's Featured crop was cutting the old left-aligned name). After a
+  redeploy, re-scrape via LinkedIn Post Inspector to bust its cache.
 - **Enquiry notifications beyond email** — Resend forwarding is wired; an iOS
   Shortcut poll of an authed enquiries endpoint is a possible alternative.
