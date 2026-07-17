@@ -60,6 +60,18 @@ without them enquiries only land in KV).
 ## Globe behavior (main.js)
 
 - **Hex-grid Earth** (`#baa6d0` dots), atmosphere `#6a5acd`, dark surface.
+- **Day/night terminator** — a transparent shader shell 0.6% above the hex
+  layer darkens the hemisphere facing away from the sun (deep-navy tint,
+  soft `smoothstep(0.09, -0.12)` dusk band). Sun position = `subsolarPoint()`
+  (solar declination + equation of time, client-side only), pushed to the
+  `sunDir` uniform every 60s — the terminator drifts ~0.25°/min in real time.
+  Three.js constructors are **borrowed from globe.gl's scene objects** (no
+  extra library; `initTerminator()` retries while the scene builds, then
+  gives up quietly if globe.gl internals ever change). Side effect (accepted):
+  travel dots + arc endpoints also dim on the night side. When Jakarta is in
+  darkness, the live beacon cross-fades to a warm glow
+  (`.pin-glow-persistent.night`). Dials: night alpha `0.52` + tint
+  `vec4(0.006, 0.006, 0.016, …)` in the fragment shader; warm-glow CSS.
 - **Travel trail** — curated 2026 journey (`HOME` → `PLACES` → `JOURNEY`,
   round-trips from the Jakarta hub, deduped undirected `buildArcs()`) as the
   base, with **auto-tracked stops** (`applyLocations()`) appended on top as
@@ -72,8 +84,7 @@ without them enquiries only land in KV).
   "Current location" for the live pin.
 - **Auto-spin** — pauses while dragging/hovering the globe, eases back up to
   speed ~0.5s after 3s of stillness (`updateAutoSpin()` in the `trackPin` loop).
-- **Guided-replay comet** — in progress on branch `guided-replay-comet` (not
-  merged; repo may be checked out on it during polish). Flies the journey
+- **Guided-replay comet** — merged (PR #44). Flies the journey
   chronologically. The trail is a **canvas overlay** (`.replay-trail-canvas`,
   DPR-aware, sized from the globe's WebGL canvas because globe.gl's wrapper
   div is 0×0): exact Bézier positions are buffered with timestamps

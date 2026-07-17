@@ -290,6 +290,84 @@ globeWrapper.appendChild(persistentGlow);
 
 let pinLat = null, pinLng = null;
 
+// ── Day/night terminator ─────────────────────────────
+// A transparent shell just above the hex layer, shaded per-fragment: the
+// hemisphere facing away from the sun darkens through a soft smoothstep
+// terminator that drifts in real time. Sun position = standard subsolar
+// point (solar declination + equation of time) — pure client-side math.
+// Three.js classes are borrowed from globe.gl's own scene objects, so no
+// extra library is loaded.
+function subsolarPoint(d = new Date()) {
+    const doy = (d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5; // day of year (fractional)
+    const decl = -23.44 * Math.cos((Math.PI / 180) * (360 / 365) * (doy + 10));
+    const B = (Math.PI / 180) * (360 / 365) * (doy - 81);
+    const eotMin = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    const utcH = d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600;
+    return { lat: decl, lng: -((utcH + eotMin / 60) - 12) * 15 };
+}
+
+let nightShellUniforms = null;
+
+function updateSun() {
+    const { lat, lng } = subsolarPoint();
+    const c = globe.getCoords(lat, lng, 0);
+    const len = Math.hypot(c.x, c.y, c.z) || 1;
+    const sun = { x: c.x / len, y: c.y / len, z: c.z / len };
+    if (nightShellUniforms) nightShellUniforms.sunDir.value.set(sun.x, sun.y, sun.z);
+    // Jakarta's beacon warms up while home sits in darkness
+    const h = globe.getCoords(HOME.lat, HOME.lng, 0);
+    const hLen = Math.hypot(h.x, h.y, h.z) || 1;
+    persistentGlow.classList.toggle('night', (h.x * sun.x + h.y * sun.y + h.z * sun.z) / hLen < 0);
+}
+
+(function initTerminator(attempt = 0) {
+    // Borrow constructors from whatever globe.gl already put in the scene
+    let MeshC = null, ShaderMatC = null, SphereGeomC = null, Vec3C = null;
+    globe.scene().traverse(o => {
+        if (!o.isMesh) return;
+        MeshC = MeshC || o.constructor;
+        Vec3C = Vec3C || o.position.constructor;
+        if (o.geometry && o.geometry.parameters && o.geometry.parameters.radius) SphereGeomC = SphereGeomC || o.geometry.constructor;
+        if (o.material && o.material.isShaderMaterial) ShaderMatC = ShaderMatC || o.material.constructor;
+    });
+    if (!MeshC || !ShaderMatC || !SphereGeomC || !Vec3C) {
+        // scene not fully built yet (or globe.gl internals changed — give up quietly)
+        if (attempt < 20) setTimeout(() => initTerminator(attempt + 1), 500);
+        return;
+    }
+
+    const { lat, lng } = subsolarPoint();
+    const c = globe.getCoords(lat, lng, 0);
+    const len = Math.hypot(c.x, c.y, c.z) || 1;
+    nightShellUniforms = { sunDir: { value: new Vec3C(c.x / len, c.y / len, c.z / len) } };
+
+    const shell = new MeshC(
+        new SphereGeomC(globe.getGlobeRadius() * 1.006, 64, 64),
+        new ShaderMatC({
+            uniforms: nightShellUniforms,
+            vertexShader: `
+                varying vec3 vPos;
+                void main() {
+                    vPos = position;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }`,
+            fragmentShader: `
+                uniform vec3 sunDir;
+                varying vec3 vPos;
+                void main() {
+                    float d = dot(normalize(vPos), sunDir);
+                    float night = smoothstep(0.09, -0.12, d); // soft terminator band
+                    gl_FragColor = vec4(0.006, 0.006, 0.016, night * 0.52);
+                }`,
+            transparent: true,
+            depthWrite: false,
+        })
+    );
+    globe.scene().add(shell);
+    updateSun();
+    setInterval(updateSun, 60000); // terminator drifts ~0.25°/min
+})();
+
 // Fallback location + vitals until API responds
 setLocation(-6.2088, 106.8456); // fallback: Jakarta
 

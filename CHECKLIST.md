@@ -13,6 +13,11 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 
 ## Globe
 - Loads, auto-spins slowly, pin glows on Jakarta.
+- Day/night terminator: hexes on the sun-facing side bright periwinkle,
+  night side dimmed navy, soft dusk band between — positioned correctly for
+  the current UTC time (sun over ~15°E at noon UTC, drifting west).
+- Jakarta beacon: white by day, warm sodium glow while Jakarta is dark
+  (~18:00–06:00 WIB).
 - Travel arcs + periwinkle city dots render.
 - Hover a city dot → "City — date" tooltip; hover the white pin → current city.
 - Drag it → spin pauses; release → eases back up after ~3s.

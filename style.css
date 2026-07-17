@@ -849,6 +849,13 @@ h1 {
     transform: translate(-50%, -50%);
     opacity: 0;
     z-index: 1;
+    transition: background 2s ease, box-shadow 2s ease;
+}
+
+/* while home is on the night side of the terminator: a warm city-lights glow */
+.pin-glow-persistent.night {
+    background: radial-gradient(circle, rgba(255,228,180,0.95) 0%, rgba(255,205,140,0.45) 30%, rgba(255,185,110,0.12) 60%, transparent 80%);
+    box-shadow: 0 0 18px 10px rgba(255,195,120,0.4);
 }
 
 /* Guided-replay comet + trail + arrival label */
