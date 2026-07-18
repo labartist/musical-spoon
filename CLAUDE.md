@@ -92,20 +92,18 @@ without them enquiries only land in KV).
   one tapered two-pass stroke (soft periwinkle glow + bright core, `lighter`
   compositing) — continuous at any speed (the old DOM-dot trail tore into
   visible dots on fast legs), flows across leg boundaries, and eases into a
-  city during the arrival hold. Far-side culling is altitude-aware
-  (`horizonAngle()` = 90° + acos(1/(1+alt)) — a raised arc stays visible past
-  the horizon). Arrival popup (`.replay-label`) shows at every stop, Jakarta
-  included. Tuning dials in main.js: `TRAIL_MS` (tail length), `TRAIL_SAMPLES`,
-  the `fade*fade` alpha curve + `rgba` peaks in the stroke loop, and
-  `COMET_HOLD_MS` / `COMET_LEG_BASE_MS` / `COMET_LEG_DIST_MS` (pacing).
-  Respects `prefers-reduced-motion` (comet off).
-  ⚠️ **Open issue:** the comet/trail is still sometimes visible behind the
-  globe near the limb, even after switching `horizonAngle()` to the
-  camera-distance-aware formula (acos(1/d) + acos(1/(1+alt))). Parked at
-  Gary's request. Next things to try: verify `pointOfView().altitude` is the
-  value assumed (camera may sit closer than `1+alt` suggests after globe.gl's
-  auto-fit), or ditch the analytic check and depth-test against the WebGL
-  scene (e.g. raycast, or compare the point's projected depth to the sphere's).
+  city during the arrival hold. Far-side culling is a true depth test:
+  `isBehindGlobe()` intersects the sightline from the *real* camera position
+  (`globe.camera().position`, via `getCoords`/`getGlobeRadius`) with the globe
+  sphere — a point is hidden iff the sphere is hit strictly before it (small
+  epsilon so surface points don't self-occlude). This replaced the old
+  analytic `horizonAngle()` estimate, which trusted `pointOfView().altitude`
+  as the camera distance and let the comet/trail peek through near the limb.
+  Arrival popup (`.replay-label`) shows at every stop, Jakarta included, and
+  uses the same check. Tuning dials in main.js: `TRAIL_MS` (tail length),
+  `TRAIL_SAMPLES`, the `fade*fade` alpha curve + `rgba` peaks in the stroke
+  loop, and `COMET_HOLD_MS` / `COMET_LEG_BASE_MS` / `COMET_LEG_DIST_MS`
+  (pacing). Respects `prefers-reduced-motion` (comet off).
 
 ## Hero reveal panels (GitHub / LinkedIn / Parklane)
 
@@ -205,8 +203,9 @@ implementing the one-liner ourselves and deleting the bot branch.
 
 ## Roadmap / parked ideas
 
-- **Comet limb bug** — the open issue above (comet visible behind the globe
-  near the edge); try a real depth test next.
+- ~~Comet limb bug~~ — fixed 2026-07: far-side culling is now an exact
+  ray-sphere depth test against the real camera (`isBehindGlobe()` in
+  main.js), replacing the analytic horizon-angle estimate.
 - **Projects showcase** — Experience now lives in the LinkedIn panel; a
   separate projects/cards section is still open if Gary wants one.
 - ~~OG image refresh~~ — regenerated 2026-07 with a crop-safe centered layout

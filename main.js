@@ -578,13 +578,28 @@ const cometLabel = document.createElement('div');
 cometLabel.className = 'replay-label';
 globeWrapper.appendChild(cometLabel);
 
-// Angular distance from the current view centre → used to hide things behind the globe
-function viewAngle(lat, lng) {
-    const pov = globe.pointOfView();
-    const r = d => d * Math.PI / 180;
-    const dLat = r(lat - pov.lat), dLng = r(lng - pov.lng);
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(pov.lat)) * Math.cos(r(lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+// A point is hidden iff the straight line from the real camera to it passes
+// through the globe sphere first — an exact world-space occlusion test
+// (getCoords/getGlobeRadius/camera are globe.gl utilities; the sphere sits at
+// the scene origin). Replaces the old analytic horizon-angle estimate, which
+// trusted pointOfView().altitude as the camera distance and let the comet and
+// trail show through the globe near the limb.
+function isBehindGlobe(lat, lng, alt) {
+    const p = globe.getCoords(lat, lng, alt);
+    const c = globe.camera().position;
+    const R = globe.getGlobeRadius();
+    const dx = p.x - c.x, dy = p.y - c.y, dz = p.z - c.z;
+    const L = Math.hypot(dx, dy, dz);
+    if (!L) return false;
+    // ray-sphere: |C + t·d̂|² = R², nearest root
+    const bx = dx / L, by = dy / L, bz = dz / L;
+    const b = c.x * bx + c.y * by + c.z * bz;
+    const disc = b * b - (c.x * c.x + c.y * c.y + c.z * c.z - R * R);
+    if (disc <= 0) return false; // sightline misses the sphere entirely
+    const tHit = -b - Math.sqrt(disc);
+    // occluded only when the sphere is hit strictly before the point — the
+    // epsilon keeps points sitting ON the surface from occluding themselves
+    return tHit > 0 && tHit < L - R * 0.003;
 }
 
 let legIdx = 0, legT = 0, holdT = 0, replayDone = false;
@@ -604,15 +619,6 @@ function bezierPoint(leg, t) {
         lng: Math.atan2(y, x) * 180 / Math.PI,
         alt: rr - 1,
     };
-}
-
-// True visibility horizon for a camera at finite distance: a surface point
-// hides at acos(1/d) from the view centre (~73° at the default zoom, NOT 90°),
-// while altitude extends visibility by acos(1/(1+alt)). Small margin so
-// strokes don't linger on the limb.
-function horizonAngle(alt) {
-    const d = 1 + (globe.pointOfView().altitude || 2.5); // camera distance in globe radii
-    return Math.acos(1 / d) + Math.acos(1 / (1 + Math.max(0, alt))) - 0.02;
 }
 
 const trailHistory = []; // recent exact path positions: {lat, lng, alt, t}
@@ -660,7 +666,7 @@ function hideComet() {
     if (c) {
         comet.style.left = `${c.x}px`;
         comet.style.top = `${c.y}px`;
-        comet.style.opacity = viewAngle(lat, lng) < horizonAngle(alt) ? 1 : 0; // hide on far side
+        comet.style.opacity = isBehindGlobe(lat, lng, alt) ? 0 : 1; // hide on far side
     }
 
     // Trail — one continuous tapered stroke over the last TRAIL_MS of travel.
@@ -692,7 +698,7 @@ function hideComet() {
                 p = { lat: Math.asin(z / rr) * 180 / Math.PI, lng: Math.atan2(y, x) * 180 / Math.PI, alt: rr - 1 };
             }
             const sc = globe.getScreenCoords(p.lat, p.lng, p.alt);
-            pts.push(sc && viewAngle(p.lat, p.lng) < horizonAngle(p.alt) ? sc : null);
+            pts.push(sc && !isBehindGlobe(p.lat, p.lng, p.alt) ? sc : null);
         }
         trailCtx.globalCompositeOperation = 'lighter';
         trailCtx.lineCap = 'round';
@@ -729,7 +735,7 @@ function hideComet() {
         if (lc) {
             cometLabel.style.left = `${lc.x}px`;
             cometLabel.style.top = `${lc.y}px`;
-            cometLabel.style.opacity = viewAngle(labelCity.lat, labelCity.lng) < Math.PI / 2 ? 1 : 0;
+            cometLabel.style.opacity = isBehindGlobe(labelCity.lat, labelCity.lng, 0.04) ? 0 : 1;
         }
     } else {
         cometLabel.style.opacity = 0;
