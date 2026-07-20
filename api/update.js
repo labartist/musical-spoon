@@ -69,23 +69,38 @@ export default async function handler(req, res) {
 		try {
 			const today = resolveDay(req.body);
 			let history = (await kv.get('vitals_history')) || [];
-			const entry = {
-				date: today,
-				steps: data.steps,
-				distance: data.distance,
-				calories: data.calories,
-			};
-			const idx = history.findIndex(h => h.date === today);
-			if (idx >= 0) {
+			const mergeDay = entry => {
+				const idx = history.findIndex(h => h.date === entry.date);
+				if (idx < 0) { history.push(entry); return; }
 				const prev = history[idx];
 				history[idx] = {
-					date: today,
+					date: entry.date,
 					steps: Math.max(Number(prev.steps) || 0, entry.steps),
 					distance: Math.max(Number(prev.distance) || 0, entry.distance),
 					calories: Math.max(Number(prev.calories) || 0, entry.calories),
 				};
-			} else {
-				history.push(entry);
+			};
+			mergeDay({
+				date: today,
+				steps: data.steps,
+				distance: data.distance,
+				calories: data.calories,
+			});
+			// Optional back-fill: `days` carries closed-out totals for recent
+			// dates (typically yesterday's final Health numbers, queried fresh by
+			// the Shortcut). Same max rule — so a day whose last live push landed
+			// early (evening steps never sent) self-heals on the next day's pushes.
+			if (Array.isArray(req.body.days)) {
+				for (const d of req.body.days.slice(0, 7)) {
+					if (!d || typeof d.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.date)) continue;
+					if (d.date > today) continue; // a typo'd future date must not evict real rows
+					mergeDay({
+						date: d.date,
+						steps: Number(d.steps) || 0,
+						distance: Number(d.distance) || 0,
+						calories: Number(d.calories) || 0,
+					});
+				}
 			}
 			history.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 			history = history.slice(-14); // keep ~2 weeks
