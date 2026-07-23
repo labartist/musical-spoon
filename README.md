@@ -1,13 +1,17 @@
 # musical-spoon
 
-Personal portfolio for Gary Ramli — [garyramli.com](https://garyramli.com).
-A "living dashboard": 3D travel globe with auto-tracking, live location/weather/time
-from Apple Health via iOS Shortcut, activity trends, and GitHub/LinkedIn/Parklane
-reveal panels. Vanilla HTML/CSS/JS + Vercel serverless functions + Vercel KV.
+#### Personal portfolio for Gary Ramli — [garyramli.com](https://garyramli.com)
+
+- 3D travel globe with auto-tracking
+- Live location/weather/time from Apple Health via iOS Shortcut
+- Activity trends
+- GitHub/LinkedIn/Parklane reveal panels
+
+ Built with Vanilla HTML/CSS/JS + Vercel
 
 ## Local preview
 
-You can serve the repo root and open the printed URL via:
+###### You can serve the repo root and open the printed URL via:
 
 ```
 python -m http.server xxxx --directory .
@@ -26,14 +30,16 @@ overnight/morning runs keep the live numbers fresh and deliver the previous
 days' back-fill. Set the automation to **Run Immediately** (Ask Before Running
 **off**) so a run near midnight isn't silently delayed into the next day.
 
-### Request
+### Shortcut Configuration
 
+###### Contents:
 ```
-POST https://garyramli.com/api/update
+POST https://<URL>/api/update
 Authorization: Bearer <AUTH_KEY>
 Content-Type: application/json
 ```
 
+###### Example Payload:
 ```json
 {
   "steps": 6264,
@@ -50,12 +56,12 @@ Content-Type: application/json
 }
 ```
 
-| field | purpose |
+| Field | Description |
 |-------|---------|
-| `steps` / `distance` / `calories` / `flights` | today's live Health totals (the `vitals` snapshot shown at the top of the page) |
-| `lat` / `lng` | current GPS — repositions the globe pin, drives weather/timezone, and feeds `location_history` |
-| `date` | today's **device-local** day as `YYYY-MM-DD`. Keys the history row to the phone's day so totals bucket correctly while travelling. Omit → server falls back to `Asia/Jakarta`. (`tz` with an IANA name also works instead of `date`.) |
-| `days` | back-fill: closed-out totals for recent dates. Each entry merges into history by per-metric **max**, so it can raise/create a day but never lower one. Up to **7** entries, `YYYY-MM-DD`, future dates rejected. |
+| `steps` / `distance` / `calories` / `flights` | Today's live Health totals (the `vitals` snapshot shown at the top of the page) |
+| `lat` / `lng` | Current GPS — repositions the globe pin, drives weather/timezone, and feeds `location_history` |
+| `date` | Today's **device-local** day as `YYYY-MM-DD`. Keys the history row to the phone's day so totals bucket correctly while travelling. Omit → server falls back to `Asia/Jakarta`. (`tz` with an IANA name also works instead of `date`) |
+| `days` | Recent entries - best practice is to push yesterday's data *(more below)* |
 
 ### Why `days` (self-healing history)
 
@@ -86,21 +92,20 @@ After the loop, set the request body's `days` = `DaysList`.
 
 ### Server behavior (`api/update.js`)
 
-Bearer-auth + 1-per-30s rate limit. `resolveDay()` picks the history row
-(`date` → `tz` → Jakarta). Today's push and every `days` entry merge by
-per-metric `Math.max`; history is sorted and capped to the last **14** days.
-GPS pings > 80 km from the last recorded stop append to `location_history`
-(capped to 10). History/location writes are best-effort — they never fail the
-main `vitals` write.
+We use Bearer-auth + 1-per-30s rate limit. We also use `resolveDay()` to pick the 
+history row (`date` → `tz` → Jakarta). This pushes every `days` entry (today and however
+many days) merge by per-metric is done via `Math.max`. History is sorted and capped to the last **14** days. 
+
+GPS pings > 80 km from the last recorded stop append to `location_history` (capped to 10). 
 
 ## Misc
 
 A local, gitignored `.claude/launch.json` wires this up for the Claude Code
-preview tool. The `/api` routes 404 locally (no Vercel runtime), so
-vitals/trend/locations fall back to demo values. 
+preview tool. 
+
+`/api` routes 404 locally (no Vercel runtime), so vitals/trend/locations fall back to demo values. 
 
 Browsers cache JS/CSS hard on a fixed port; bump the port to force a fresh load.
 
 For LLMs - see [`CHECKLIST.md`](CHECKLIST.md) for what to verify after a change, and
 [`CLAUDE.md`](CLAUDE.md) for the full architecture, data flow, and conventions.
-
