@@ -163,7 +163,12 @@ scoping if you touch it.
   suppresses the card link click; native link/image drag is blocked).
 - **Trend chart** — weekly steps/distance/calories overlay under Daily Vitals,
   hover/tap for a per-day tooltip (pinch-zoom aware and edge-clamped, same as
-  the GitHub tooltip).
+  the GitHub tooltip). Each metric is normalized to its own min/max, so the
+  lowest day sits on the floor of the plot box — which early in the day is
+  *today*, still accumulating. `TREND_PAD_TOP`/`TREND_PAD_BOT` keep that point
+  off the frame edge, an always-on dot marks the newest day (the hover dots
+  only exist under a pointer), and today's tooltip is suffixed `· so far` so a
+  part-day total doesn't read as a slump.
 
 ## Local preview
 
