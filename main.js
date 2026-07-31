@@ -761,6 +761,12 @@ function setVitals({ steps, distance, calories }) {
 
 // ── Weekly trend chart (steps / distance / calories combined) ─────────
 const TREND_W = 260, TREND_H = 44, TREND_PAD = 4;
+// Vertical insets are deliberately deeper than the horizontal pad. Each metric
+// is normalized to its own min/max, so the lowest day lands on the bottom of
+// the plot box — and first thing in the morning that day is *today*, still in
+// progress. Flush against the frame it stops reading as a data point and the
+// line just runs off into the floor. Keep some air under the minimum.
+const TREND_PAD_TOP = 5, TREND_PAD_BOT = 8;
 const TREND_METRICS = [
     { key: 'steps',    label: 'Steps',    color: '#8f9ed0' },
     { key: 'distance', label: 'Distance', color: '#73a596' },
@@ -778,6 +784,11 @@ function fmtTrendDate(d) {
     if (!d) return '';
     const dt = new Date(d + 'T00:00:00');
     return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+}
+
+// Local YYYY-MM-DD (not UTC) — history rows are keyed to the device's day
+function localDateKey(d = new Date()) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Pinch-zoom anchoring for position:fixed tooltips. When zoomed on mobile,
@@ -805,7 +816,7 @@ function renderTrend(history) {
         const vals = recent.map(h => Number(h[key]) || 0);
         const min = Math.min(...vals), max = Math.max(...vals);
         const range = (max - min) || 1;
-        const ys = vals.map(v => TREND_H - TREND_PAD - ((v - min) / range) * (TREND_H - TREND_PAD * 2));
+        const ys = vals.map(v => TREND_H - TREND_PAD_BOT - ((v - min) / range) * (TREND_H - TREND_PAD_TOP - TREND_PAD_BOT));
         return { key, color, ys };
     });
 
@@ -814,8 +825,14 @@ function renderTrend(history) {
     ).join('');
     const guide = `<line class="trend-guide" y1="${TREND_PAD}" y2="${TREND_H - TREND_PAD}" stroke="#666" stroke-width="0.6" stroke-dasharray="2 2" opacity="0"/>`;
     const dots = series.map(s => `<circle class="trend-hi" r="2.2" fill="${s.color}" opacity="0"/>`).join('');
+    // Always-on marker on the newest day. The hover dots only exist while a
+    // pointer is on the chart, so without this the latest point — typically
+    // today, sitting at the bottom of the range while the day is young — has
+    // nothing to distinguish it from the end of a line.
+    const latest = series.map(s =>
+        `<circle cx="${xOf(n - 1).toFixed(1)}" cy="${s.ys[n - 1].toFixed(1)}" r="1.9" fill="${s.color}" opacity="0.9"/>`).join('');
     const hit = `<rect x="0" y="0" width="${TREND_W}" height="${TREND_H}" fill="transparent" pointer-events="all"/>`;
-    const svg = `<svg class="trend-svg" viewBox="0 0 ${TREND_W} ${TREND_H}" xmlns="http://www.w3.org/2000/svg">${hit}${guide}${lines}${dots}</svg>`;
+    const svg = `<svg class="trend-svg" viewBox="0 0 ${TREND_W} ${TREND_H}" xmlns="http://www.w3.org/2000/svg">${hit}${guide}${lines}${latest}${dots}</svg>`;
     const legend = TREND_METRICS.map(({ label, color }) =>
         `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
 
@@ -856,7 +873,10 @@ function renderTrend(history) {
         guideEl.setAttribute('x1', x); guideEl.setAttribute('x2', x); guideEl.setAttribute('opacity', '1');
         series.forEach((s, k) => { dotEls[k].setAttribute('cx', x); dotEls[k].setAttribute('cy', s.ys[i]); dotEls[k].setAttribute('opacity', '1'); });
         const h = recent[i];
-        tip.innerHTML = `<span class="trend-tip-date">${fmtTrendDate(h.date)}</span>`
+        // Flag the in-progress day: it reads as a slump otherwise, since it's
+        // being compared against days that had all 24 hours to accumulate.
+        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · so far' : '');
+        tip.innerHTML = `<span class="trend-tip-date">${dateLabel}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
         tip.classList.add('show'); // show first so the tip has measurable dimensions
         const sRect = svgEl.getBoundingClientRect();
