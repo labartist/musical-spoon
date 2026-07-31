@@ -69,15 +69,32 @@ export default async function handler(req, res) {
 		try {
 			const today = resolveDay(req.body);
 			let history = (await kv.get('vitals_history')) || [];
-			const mergeDay = entry => {
+			// Two merge modes:
+			//  · today's row grows all day and a push can be stale (Watch not yet
+			//    synced), so live values only ever raise it — `max`.
+			//  · a *closed* day sent in `days` is a fresh read of Health's final
+			//    total, i.e. authoritative: it replaces, so an over-count can come
+			//    back down instead of being locked in forever by the max ratchet.
+			//    Guard: a metric of 0 keeps the stored value — the three metrics
+			//    come from three separate Health queries, so one failing must not
+			//    blank a real day (a closed day never legitimately drops to 0).
+			const mergeDay = (entry, authoritative) => {
 				const idx = history.findIndex(h => h.date === entry.date);
-				if (idx < 0) { history.push(entry); return; }
+				if (idx < 0) {
+					// never create a row out of an all-zero reading (failed queries)
+					if (authoritative && !entry.steps && !entry.distance && !entry.calories) return;
+					history.push(entry);
+					return;
+				}
 				const prev = history[idx];
+				const pick = (was, now) => authoritative
+					? (now > 0 ? now : (Number(was) || 0))   // replace, keeping non-zero
+					: Math.max(Number(was) || 0, now);       // live: only ever raise
 				history[idx] = {
 					date: entry.date,
-					steps: Math.max(Number(prev.steps) || 0, entry.steps),
-					distance: Math.max(Number(prev.distance) || 0, entry.distance),
-					calories: Math.max(Number(prev.calories) || 0, entry.calories),
+					steps: pick(prev.steps, entry.steps),
+					distance: pick(prev.distance, entry.distance),
+					calories: pick(prev.calories, entry.calories),
 				};
 			};
 			mergeDay({
@@ -85,11 +102,11 @@ export default async function handler(req, res) {
 				steps: data.steps,
 				distance: data.distance,
 				calories: data.calories,
-			});
+			}, false);
 			// Optional back-fill: `days` carries closed-out totals for recent
-			// dates (typically yesterday's final Health numbers, queried fresh by
-			// the Shortcut). Same max rule — so a day whose last live push landed
-			// early (evening steps never sent) self-heals on the next day's pushes.
+			// dates, queried fresh from Health by the Shortcut. Past days are
+			// authoritative (replace); an entry dated today is just another live
+			// reading of a day still in progress, so it merges with `max`.
 			if (Array.isArray(req.body.days)) {
 				for (const d of req.body.days.slice(0, 7)) {
 					if (!d || typeof d.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.date)) continue;
@@ -99,7 +116,7 @@ export default async function handler(req, res) {
 						steps: Number(d.steps) || 0,
 						distance: Number(d.distance) || 0,
 						calories: Number(d.calories) || 0,
-					});
+					}, d.date < today);
 				}
 			}
 			history.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));

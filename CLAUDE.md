@@ -24,7 +24,7 @@ reveal panel system.
 | `index.html` | Single page: hero (name + GitHub/LinkedIn/Parklane reveal panels), globe, time/weather, Daily Vitals section (steps/distance/calories + trend), footer |
 | `style.css` | All styling. Dark theme: bg `#08080c`, text `#ececf0`, muted `#444`/`#666` |
 | `main.js` | Globe + travel trail + auto-tracking, vitals/weather/time fetch, hero-panel accordion animations, carousel drag-to-scroll, GitHub heatmap |
-| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (one row per device-local day — optional `date`/`tz` from the Shortcut, Jakarta fallback; all merges take the per-metric max so a stale push can't wipe totals; optional `days: [{date, steps, distance, calories}]` back-fills recent dates, e.g. yesterday's final Health totals, ≤7 entries, future dates rejected; last 14 days), and appends distance-deduped stops to `location_history` (last 10) |
+| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (one row per device-local day — optional `date`/`tz` from the Shortcut, Jakarta fallback; today's row merges by per-metric max so a stale push can't wipe totals, while a `days` entry for a *past* day replaces — a closed day's Health total is authoritative, so over-counts self-correct downward; zero metrics keep the stored value; optional `days: [{date, steps, distance, calories}]`, ≤7 entries, future dates rejected; last 14 days), and appends distance-deduped stops to `location_history` (last 10) |
 | `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` + `location_history` (60s cache), returns `{...vitals, history, locations}` |
 | `api/contact.js` | `POST /api/contact` — public enquiry box; honeypot + per-IP rate limit (1/min) + length caps; stores to KV list `enquiries` (newest first, cap 50; read in the Upstash data browser) and forwards to the inbox via Resend when `RESEND_API_KEY`/`CONTACT_EMAIL` are set (best-effort — KV write is the source of truth) |
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
@@ -38,14 +38,20 @@ reveal panel system.
 2. `update.js` validates auth + rate limit, stores the latest `vitals` object,
    upserts today's entry into `vitals_history` (one row per *device-local* day
    — the Shortcut may send `date` (YYYY-MM-DD) or `tz` (IANA name) in the JSON
-   body, else Jakarta is assumed; rows merge by per-metric `Math.max` because
-   daily Health totals only grow — capped to 14). The Shortcut should also
-   send `days: [{date, steps, distance, calories}]` with *yesterday's* final
-   Health totals: a day whose last live push landed early (evening steps
-   never sent) self-heals on the next day's pushes. Same max merge, ≤7
-   entries, future dates rejected. Finally — if the ping is >80km from the
-   last recorded stop — it's appended to `location_history` (capped to 10,
-   dedupes daily movement).
+   body, else Jakarta is assumed; today's row merges by per-metric `Math.max`
+   because a day in progress only grows and a push may be stale — capped to
+   14). The Shortcut also sends `days: [{date, steps, distance, calories}]`
+   with the last 7 days' final Health totals (a Repeat loop over
+   `Current Date − Repeat Index`). A `days` entry for a **past** day is
+   *authoritative* and replaces the row, so both under- and over-counts
+   converge on Health; a zero metric keeps the stored value (one failed
+   Health query must not blank a day) and an all-zero entry never creates a
+   row. ≤7 entries, future dates rejected. ⚠️ Known ±~1% limit: Health
+   apportions midnight-straddling samples across both days but
+   `Find Health Samples` credits the whole sample to its start day, so a walk
+   across midnight shows as a transfer between adjacent days (not fixable
+   server-side). Finally — if the ping is >80km from the last recorded stop —
+   it's appended to `location_history` (capped to 10, dedupes daily movement).
 3. Browser `GET`s `/api/data` on load and every 5 min; falls back to demo
    values when the API 404s (e.g. local dev). Response includes `history` + `locations`.
 4. `lat/lng` repositions the globe pin and triggers the Open-Meteo weather/timezone fetch.
