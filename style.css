@@ -413,13 +413,19 @@ h1 {
     cursor: crosshair;
 }
 
-/* Hover tooltip on the trend chart (fixed → escapes the dropdown's overflow clip) */
+/* Hover tooltip on the trend chart (fixed → escapes the dropdown's overflow clip).
+   Frosted glass: it floats over the Daily Vitals readout, and at the old 0.45
+   alpha the huge DISTANCE figure read straight through the rows. The blur
+   softens whatever is behind it while keeping the panel translucent — the
+   fallback where backdrop-filter is unsupported is simply a darker tooltip. */
 .trend-tip,
 .gh-tip {
     position: fixed;
     transform: translate(-50%, calc(-100% - 6px));
-    background: rgba(8, 8, 8, 0.45);
-    border: 1px solid #1a1a1f;
+    background: rgba(10, 10, 14, 0.82);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid #26242f;
     border-radius: 8px;
     padding: 6px 9px;
     display: flex;
@@ -430,7 +436,7 @@ h1 {
     opacity: 0;
     transition: opacity 0.12s ease;
     z-index: 6;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .trend-tip.show,
