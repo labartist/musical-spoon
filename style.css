@@ -495,6 +495,22 @@ h1 {
     overflow: hidden;
 }
 
+/* Small label above the carousel — same uppercase/letter-spaced treatment as
+   the LinkedIn panel's "Experience" heading and the DAILY VITALS labels, so
+   the sections read as a set. Centering is inherited from .hero; the inline
+   padding matches .showcase-track's so it can't butt against the panel edge.
+   Clipped along with the rest of the panel while it's collapsed (0fr row). */
+.showcase-heading {
+    display: block;
+    padding: 0 1rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #666;
+}
+
 .showcase-track {
     display: flex;
     gap: 1.25rem;
