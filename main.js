@@ -841,7 +841,7 @@ function renderTrend(history) {
     const legend = TREND_METRICS.map(({ label, color }) =>
         `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
 
-    el.innerHTML = `<span class="trend-label">Past ${n} days<span class="trend-total">${TREND_FMT.steps(totalSteps)}</span></span>${svg}<div class="trend-legend">${legend}</div>`;
+    el.innerHTML = `<span class="trend-label"><span class="trend-total">${TREND_FMT.steps(totalSteps)}</span>Past ${n} days</span>${svg}<div class="trend-legend">${legend}</div>`;
     el.style.display = 'flex';
 
     // ── hover interaction ──
@@ -880,7 +880,7 @@ function renderTrend(history) {
         const h = recent[i];
         // Flag the in-progress day: it reads as a slump otherwise, since it's
         // being compared against days that had all 24 hours to accumulate.
-        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · so far' : '');
+        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · So Far' : '');
         tip.innerHTML = `<span class="trend-tip-date">${dateLabel}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
         tip.classList.add('show'); // show first so the tip has measurable dimensions
