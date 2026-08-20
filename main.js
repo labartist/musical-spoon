@@ -759,6 +759,18 @@ function setVitals({ steps, distance, calories }) {
     document.getElementById('calories').textContent = Math.round(calories).toLocaleString();
 }
 
+function setFreshness(iso) {
+    const el = document.getElementById('vitals-updated');
+    if (!el || !iso) return;
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 0 || isNaN(diff)) { el.textContent = ''; return; }
+    const txt = diff < 120 ? 'just now'
+        : diff < 3600 ? Math.round(diff / 60) + ' min ago'
+        : diff < 86400 ? Math.round(diff / 3600) + ' hr ago'
+        : Math.round(diff / 86400) + ' d ago';
+    el.textContent = txt;
+}
+
 // ── Weekly trend chart (steps / distance / calories combined) ─────────
 const TREND_W = 260, TREND_H = 44, TREND_PAD = 4;
 // Vertical insets are deliberately deeper than the horizontal pad. Each metric
@@ -946,6 +958,7 @@ fetch(VITALS_API)
             distance: data.distance,
             calories: data.calories,
         });
+        setFreshness(data.updatedAt);
         renderTrend(data.history);
         applyLocations(data.locations);
         // Update globe to owner's real location + fetch weather
@@ -1024,6 +1037,7 @@ setInterval(() => {
                 distance: data.distance,
                 calories: data.calories,
             });
+            setFreshness(data.updatedAt);
             renderTrend(data.history);
             applyLocations(data.locations);
             if (data.lat && data.lng) {
