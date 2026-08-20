@@ -174,7 +174,9 @@ scoping if you touch it.
   *today*, still accumulating. `TREND_PAD_TOP`/`TREND_PAD_BOT` keep that point
   off the frame edge, an always-on dot marks the newest day (the hover dots
   only exist under a pointer), and today's tooltip is suffixed `· so far` so a
-  part-day total doesn't read as a slump.
+  part-day total doesn't read as a slump. The label carries the period's
+  step total (`PAST N DAYS · <total> STEPS`) — the day count is data-driven
+  (`n = recent.length`), and the total reuses `TREND_FMT.steps`.
 
 ## Local preview
 

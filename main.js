@@ -811,6 +811,11 @@ function renderTrend(history) {
     if (recent.length < 2) { el.innerHTML = ''; el.style.display = 'none'; return; }
 
     const n = recent.length;
+    // Weekly aggregate. Every series is normalized to its own min/max, so the
+    // chart's shape carries no absolute scale at all — and the three big figures
+    // above are today only. The label is already on screen, so hang the total
+    // off it rather than spending another line of the page on it.
+    const totalSteps = recent.reduce((sum, h) => sum + (Number(h.steps) || 0), 0);
     const xOf = i => TREND_PAD + (i / (n - 1)) * (TREND_W - TREND_PAD * 2);
     const series = TREND_METRICS.map(({ key, color }) => {
         const vals = recent.map(h => Number(h[key]) || 0);
@@ -836,7 +841,7 @@ function renderTrend(history) {
     const legend = TREND_METRICS.map(({ label, color }) =>
         `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
 
-    el.innerHTML = `<span class="trend-label">Past 7 days</span>${svg}<div class="trend-legend">${legend}</div>`;
+    el.innerHTML = `<span class="trend-label">Past ${n} days<span class="trend-total">${TREND_FMT.steps(totalSteps)}</span></span>${svg}<div class="trend-legend">${legend}</div>`;
     el.style.display = 'flex';
 
     // ── hover interaction ──

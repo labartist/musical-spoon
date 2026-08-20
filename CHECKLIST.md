@@ -46,6 +46,7 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 ## Daily Vitals (always-on section)
 - DAILY VITALS heading → steps/distance/calories values render.
 - Trend chart below (demo data locally; hidden live until ≥2 days are banked).
+- Label reads `PAST N DAYS · <total> STEPS`; total matches the sum of the plotted days.
 - Hover → date + per-metric tooltip that tracks the cursor.
 
 ## Contact corner (bottom-right)

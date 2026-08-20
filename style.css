@@ -406,6 +406,16 @@ h1 {
     color: #444;
 }
 
+.trend-total {
+    color: #666;
+}
+
+.trend-total::before {
+    content: '·';
+    margin: 0 0.45em;
+    color: #333;
+}
+
 .trend-svg {
     display: block;
     width: 100%;
