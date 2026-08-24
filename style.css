@@ -351,6 +351,16 @@ h1 {
     margin-bottom: 1rem;
 }
 
+.vitals-fresh {
+    color: #444;
+}
+
+.vitals-fresh::before {
+    content: '·';
+    margin: 0 0.45em;
+    color: #333;
+}
+
 .vitals .vitals-grid {
     padding: 0;
 }
@@ -404,6 +414,16 @@ h1 {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     color: #444;
+}
+
+.trend-total {
+    color: #666;
+}
+
+.trend-total::after {
+    content: '·';
+    margin: 0 0.45em;
+    color: #333;
 }
 
 .trend-svg {

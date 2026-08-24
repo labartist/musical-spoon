@@ -173,8 +173,10 @@ scoping if you touch it.
   lowest day sits on the floor of the plot box — which early in the day is
   *today*, still accumulating. `TREND_PAD_TOP`/`TREND_PAD_BOT` keep that point
   off the frame edge, an always-on dot marks the newest day (the hover dots
-  only exist under a pointer), and today's tooltip is suffixed `· so far` so a
-  part-day total doesn't read as a slump.
+  only exist under a pointer), and today's tooltip is suffixed `· So Far` so a
+  part-day total doesn't read as a slump. The label carries the period's
+  step total (`<total> STEPS · PAST N DAYS`) — the day count is data-driven
+  (`n = recent.length`), and the total reuses `TREND_FMT.steps`.
 
 ## Local preview
 

@@ -759,6 +759,18 @@ function setVitals({ steps, distance, calories }) {
     document.getElementById('calories').textContent = Math.round(calories).toLocaleString();
 }
 
+function setFreshness(iso) {
+    const el = document.getElementById('vitals-updated');
+    if (!el || !iso) return;
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 0 || isNaN(diff)) { el.textContent = ''; return; }
+    const txt = diff < 120 ? 'just now'
+        : diff < 3600 ? Math.round(diff / 60) + ' min ago'
+        : diff < 86400 ? Math.round(diff / 3600) + ' hr ago'
+        : Math.round(diff / 86400) + ' d ago';
+    el.textContent = txt;
+}
+
 // ── Weekly trend chart (steps / distance / calories combined) ─────────
 const TREND_W = 260, TREND_H = 44, TREND_PAD = 4;
 // Vertical insets are deliberately deeper than the horizontal pad. Each metric
@@ -811,6 +823,11 @@ function renderTrend(history) {
     if (recent.length < 2) { el.innerHTML = ''; el.style.display = 'none'; return; }
 
     const n = recent.length;
+    // Weekly aggregate. Every series is normalized to its own min/max, so the
+    // chart's shape carries no absolute scale at all — and the three big figures
+    // above are today only. The label is already on screen, so hang the total
+    // off it rather than spending another line of the page on it.
+    const totalSteps = recent.reduce((sum, h) => sum + (Number(h.steps) || 0), 0);
     const xOf = i => TREND_PAD + (i / (n - 1)) * (TREND_W - TREND_PAD * 2);
     const series = TREND_METRICS.map(({ key, color }) => {
         const vals = recent.map(h => Number(h[key]) || 0);
@@ -836,7 +853,7 @@ function renderTrend(history) {
     const legend = TREND_METRICS.map(({ label, color }) =>
         `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
 
-    el.innerHTML = `<span class="trend-label">Past 7 days</span>${svg}<div class="trend-legend">${legend}</div>`;
+    el.innerHTML = `<span class="trend-label"><span class="trend-total">${TREND_FMT.steps(totalSteps)}</span>Past ${n} days</span>${svg}<div class="trend-legend">${legend}</div>`;
     el.style.display = 'flex';
 
     // ── hover interaction ──
@@ -875,7 +892,7 @@ function renderTrend(history) {
         const h = recent[i];
         // Flag the in-progress day: it reads as a slump otherwise, since it's
         // being compared against days that had all 24 hours to accumulate.
-        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · so far' : '');
+        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · So Far' : '');
         tip.innerHTML = `<span class="trend-tip-date">${dateLabel}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
         tip.classList.add('show'); // show first so the tip has measurable dimensions
@@ -941,6 +958,7 @@ fetch(VITALS_API)
             distance: data.distance,
             calories: data.calories,
         });
+        setFreshness(data.updatedAt);
         renderTrend(data.history);
         applyLocations(data.locations);
         // Update globe to owner's real location + fetch weather
@@ -1019,6 +1037,7 @@ setInterval(() => {
                 distance: data.distance,
                 calories: data.calories,
             });
+            setFreshness(data.updatedAt);
             renderTrend(data.history);
             applyLocations(data.locations);
             if (data.lat && data.lng) {
