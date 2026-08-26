@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
     /* Single dial for the hero icon hover/active highlight — change this one
@@ -355,7 +354,9 @@ h1 {
     color: #444;
 }
 
-.vitals-fresh::before {
+/* :not(:empty) — the span is blank until data arrives (and stays blank in
+   demo/local mode); without the guard the separator dot dangles alone. */
+.vitals-fresh:not(:empty)::before {
     content: '·';
     margin: 0 0.45em;
     color: #333;

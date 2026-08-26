@@ -11,11 +11,17 @@ reveal panel system.
 ## Stack
 
 - **Front-end:** vanilla HTML/CSS/JS — no framework, no build step
-- **Globe:** [globe.gl](https://globe.gl) (Three.js) via unpkg CDN, Natural Earth 110m GeoJSON
+- **Globe:** [globe.gl](https://globe.gl) (Three.js) via unpkg CDN — **pinned**
+  (`globe.gl@2.46.1`, `defer`) so a release can't break the terminator/comet
+  internals borrow and no visitor pays the unpinned-redirect hop; Natural Earth
+  110m GeoJSON **self-hosted** in the repo root (same-origin via Vercel's CDN)
 - **Weather/time:** [Open-Meteo](https://open-meteo.com) API (free, no key) — also the source of the local timezone/city
 - **GitHub activity:** [github-contributions-api.jogruber.de](https://github-contributions-api.jogruber.de) (free, no key)
 - **Backend:** Vercel serverless functions (`/api`, ESM) + Vercel KV (Upstash Redis)
-- **Fonts:** Inter (Google Fonts)
+- **Fonts:** Inter (Google Fonts) — loaded via `<link>` + preconnect in the
+  head, **not** a CSS `@import` (which would serialize behind style.css on the
+  critical path). Both scripts are `defer` (globe.gl before main.js — document
+  order is the execution order, keep it)
 
 ## Files
 
@@ -29,6 +35,7 @@ reveal panel system.
 | `api/contact.js` | `POST /api/contact` — public enquiry box; honeypot + per-IP rate limit (1/min) + length caps; stores to KV list `enquiries` (newest first, cap 50; read in the Upstash data browser) and forwards to the inbox via Resend when `RESEND_API_KEY`/`CONTACT_EMAIL` are set (best-effort — KV write is the source of truth) |
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
 | `og-image.png` | 1200×630 social share card (generated, dark themed). All text sits in the center ~830px so platform crops (e.g. LinkedIn Featured, ~1.32:1) can't cut it — keep new text inside that safe zone if regenerating |
+| `ne_110m_admin_0_countries.geojson` | Natural Earth 110m countries (public domain), self-hosted for the globe hex grid — replaces the old raw.githubusercontent fetch (mutable branch, weak caching) |
 | `CHECKLIST.md` | Manual verification checklist (run through after any change) |
 
 ## Data flow
@@ -54,6 +61,11 @@ reveal panel system.
    it's appended to `location_history` (capped to 10, dedupes daily movement).
 3. Browser `GET`s `/api/data` on load and every 5 min; falls back to demo
    values when the API 404s (e.g. local dev). Response includes `history` + `locations`.
+   Repeat visits **instant-paint** vitals/trend/freshness from the last payload
+   (`localStorage` key `vitals_cache`, written on every successful fetch) before
+   the network answers — globe pin + weather deliberately wait for live data so
+   nothing moves twice. Demo values never write the cache, and never overwrite a
+   painted cache if the fetch fails.
 4. `lat/lng` repositions the globe pin and triggers the Open-Meteo weather/timezone fetch.
    `locations` are reverse-geocoded (BigDataCloud, free/no-key) client-side and
    appended onto the curated 2026 trail as new dots + arcs.

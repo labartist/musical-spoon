@@ -75,7 +75,9 @@
 
 // ── Globe ──────────────────────────────────────────────
 const globeEl = document.getElementById('globe-container');
-const GEOJSON_URL = 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';
+// Self-hosted (repo root) — same-origin through Vercel's CDN instead of a
+// mutable raw.githubusercontent branch (weak caching, content tracks master).
+const GEOJSON_URL = '/ne_110m_admin_0_countries.geojson';
 
 // ── Travel history (2026, round-trips from the Jakarta hub) ───────
 const HOME = { name: 'Jakarta, Indonesia', lat: -6.2088, lng: 106.8456 };
@@ -949,6 +951,26 @@ const DEMO_LOCATIONS = [
     { lat: -6.2088, lng: 106.8456, t: Date.now() -  2 * 864e5 }, // ← home to Jakarta
 ];
 
+// Instant paint from the previous visit's payload — repeat visitors otherwise
+// stare at "—" placeholders for a network round-trip. Vitals/trend/freshness
+// only: the globe pin and weather wait for live data so nothing moves twice.
+// The freshness label keeps a stale paint honest ("2 hr ago" until data lands).
+let cachedVitals = null;
+try {
+    cachedVitals = JSON.parse(localStorage.getItem('vitals_cache'));
+    if (cachedVitals && cachedVitals.updatedAt) {
+        setVitals({
+            steps: cachedVitals.steps,
+            distance: cachedVitals.distance,
+            calories: cachedVitals.calories,
+        });
+        setFreshness(cachedVitals.updatedAt);
+        renderTrend(cachedVitals.history);
+    } else {
+        cachedVitals = null;
+    }
+} catch (e) { cachedVitals = null; } // no/blocked storage — placeholders as before
+
 // Fetch live data from Vercel API, fall back to demo values
 fetch(VITALS_API)
     .then(r => r.ok ? r.json() : Promise.reject())
@@ -966,8 +988,23 @@ fetch(VITALS_API)
             setLocation(data.lat, data.lng);
             fetchWeather(data.lat, data.lng);
         }
+        try { localStorage.setItem('vitals_cache', JSON.stringify(data)); } catch (e) {}
     })
     .catch(() => {
+        if (cachedVitals) {
+            // API hiccup but last visit's real payload is already painted — keep
+            // it (demo values must never overwrite real ones) and finish the
+            // parts the cache paint deliberately skipped.
+            applyLocations(cachedVitals.locations || []);
+            if (cachedVitals.lat && cachedVitals.lng) {
+                setLocation(cachedVitals.lat, cachedVitals.lng);
+                fetchWeather(cachedVitals.lat, cachedVitals.lng);
+            } else {
+                fetchWeather(-6.2088, 106.8456);
+                document.getElementById('location-label').textContent = 'Local Time — Jakarta';
+            }
+            return;
+        }
         // API not set up yet — show demo values
         setVitals({ steps: 8432, distance: 6.2, calories: 340 });
         renderTrend(DEMO_HISTORY);
@@ -1044,6 +1081,7 @@ setInterval(() => {
                 setLocation(data.lat, data.lng);
                 fetchWeather(data.lat, data.lng);
             }
+            try { localStorage.setItem('vitals_cache', JSON.stringify(data)); } catch (e) {}
         })
         .catch(() => {});
 }, 5 * 60 * 1000);
