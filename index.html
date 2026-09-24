@@ -29,8 +29,18 @@
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
     <link rel="icon" href="favicon.ico">
+    <!-- Startup origins — connections warm up while HTML is still parsing -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://api.open-meteo.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/globe.gl"></script>
+    <!-- Pinned + deferred: an unpinned URL pays a redirect on every visit and a
+         new globe.gl release could break the terminator/comet internals borrow;
+         defer keeps the ~700KB lib off the first-paint critical path. main.js is
+         also defer, so document order still guarantees Globe exists before it runs. -->
+    <script defer src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
     <!-- Vercel Web Analytics — served by the Vercel runtime; 404s locally (expected) -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
@@ -211,6 +221,6 @@
     <div class="gradient-orb orb-1"></div>
     <div class="gradient-orb orb-2"></div>
 
-    <script src="main.js"></script>
+    <script defer src="main.js"></script>
 </body>
 </html>

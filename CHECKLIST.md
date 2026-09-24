@@ -8,6 +8,8 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 ## Every change — quick smoke test
 - **Hard-refresh** (Ctrl/Cmd+Shift+R), or use the fresh preview port to dodge cache.
 - **Console** (F12 → Console): no red errors.
+- Globe still renders (globe.gl is pinned + `defer`; main.js must stay `defer`
+  *after* it in document order).
 - Page renders fully; nothing overlaps, clips, or overflows.
 - **Resize narrow** (DevTools device toolbar) → mobile layout holds.
 
@@ -59,6 +61,8 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 ## After deploy (live site only)
 - Hard-refresh garyramli.com.
 - `garyramli.com/api/data` → JSON with real `steps/lat/lng` + `history` + `locations` (not a 404).
+- Second (normal) reload: vitals/trend paint instantly from `localStorage`
+  before the fetch lands; freshness label shows the cached age, then updates.
 - Vitals / time / weather reflect the latest push.
 - Sparklines appear once ≥2 days are banked; new travel (>80 km from the last stop) shows on the globe.
 - Contact form round-trip: send a test enquiry → lands in KV `enquiries`
