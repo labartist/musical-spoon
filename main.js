@@ -102,13 +102,19 @@ const JOURNEY = [
     PLACES.Milan, PLACES.Rome, PLACES.Naples, PLACES.Rome, HOME, // … → Florida → Rome → home
 ];
 
-// Build arcs from an ordered waypoint list, deduped undirected (out-and-back drawn once)
+// The curated JOURNEY covers everything up to here; auto-tracked pings from
+// before it are already on the trail and must not be flown a second time.
+const JOURNEY_END = Date.parse('2026-04-30T00:00:00+07:00');
+
+// Build arcs from an ordered waypoint list. Directed dedupe (A→B and B→A are
+// distinct) so a round trip draws BOTH the outbound and the return flight,
+// instead of collapsing onto a single line.
 function buildArcs(waypoints) {
     const arcs = [], seen = new Set();
     for (let i = 0; i < waypoints.length - 1; i++) {
         const a = waypoints[i], b = waypoints[i + 1];
         if (a.lat === b.lat && a.lng === b.lng) continue; // skip zero-length leg
-        const key = [`${a.lat},${a.lng}`, `${b.lat},${b.lng}`].sort().join('|');
+        const key = `${a.lat},${a.lng}|${b.lat},${b.lng}`; // directed — the return is its own arc
         if (seen.has(key)) continue;
         seen.add(key);
         arcs.push({ startLat: a.lat, startLng: a.lng, endLat: b.lat, endLng: b.lng });
@@ -127,6 +133,19 @@ function kmBetween(la1, lo1, la2, lo2) {
     const dLa = r(la2 - la1), dLo = r(lo2 - lo1);
     const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(dLo / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Apex altitude (fraction of globe radius) for a drawn arc / comet leg.
+// Distance-scaled to match globe.gl's auto height, then homebound legs bow
+// lower (×0.6) so a round trip reads as a tall arc out and a shallow arc back —
+// the return no longer hides under the outbound. Single source of truth: the
+// comet's Bézier uses it too, so its trail rides exactly on the drawn arc.
+const ARC_ALT_SCALE = 0.28; // apex per unit chord — globe.gl's auto basis
+function legApexAlt(aLat, aLng, bLat, bLng) {
+    const omega = kmBetween(aLat, aLng, bLat, bLng) / 6371; // great-circle angle (rad)
+    const base = ARC_ALT_SCALE * 2 * Math.sin(omega / 2);
+    const homebound = kmBetween(bLat, bLng, HOME.lat, HOME.lng) < 60;
+    return homebound ? base * 0.6 : base;
 }
 
 function getGlobeSize() {
@@ -172,6 +191,8 @@ const globe = Globe()(globeEl)
     })
     // Travel arcs — chronological journey path
     .arcsData(TRAVEL_ARCS)
+    // Homebound legs bow lower so each return sits below its outbound
+    .arcAltitude(d => legApexAlt(d.startLat, d.startLng, d.endLat, d.endLng))
     .arcCurveResolution(128)
     .arcColor(() => ['rgba(169,184,232,0.25)', 'rgba(169,184,232,0.9)'])
     .arcStroke(0.45)
@@ -429,9 +450,32 @@ async function applyLocations(locations) {
     }
     autoStops = dots;
     renderPoints();
-    // Extend the journey arcs through the raw stops (returns home included)
-    const tail = locations.map(l => ({ lat: l.lat, lng: l.lng }));
-    globe.arcsData(buildArcs([...JOURNEY, ...tail]));
+    // Extend the trail through the recorded stops — arcs AND the comet, from
+    // one waypoint list, so new travel (and its return home) shows up in both.
+    const waypoints = trailWaypoints(locations);
+    globe.arcsData(buildArcs(waypoints));
+    setCometWaypoints(waypoints);
+}
+
+// A raw ping snapped onto a known place, so arcs land exactly on its dot and
+// the comet's arrival popup has a name: Jakarta, a curated stop, or an
+// auto-tracked one (a return home becomes HOME itself → homebound dip + "Home").
+function snapStop(loc) {
+    if (kmBetween(loc.lat, loc.lng, HOME.lat, HOME.lng) < 60) return HOME;
+    return [...TRAVEL_DOTS, ...autoStops].find(p => kmBetween(loc.lat, loc.lng, p.lat, p.lng) < 60)
+        || { name: '', lat: loc.lat, lng: loc.lng };
+}
+
+// Curated journey + the recorded stops after it, in order (location_history is
+// oldest-first). A trip still in progress simply has no return leg yet.
+function trailWaypoints(locations) {
+    const wp = [...JOURNEY];
+    for (const loc of locations) {
+        if (loc.t < JOURNEY_END) continue; // already on the curated trail
+        const stop = snapStop(loc);
+        if (stop !== wp[wp.length - 1]) wp.push(stop);
+    }
+    return wp;
 }
 
 // Track pin screen position and visibility each frame
@@ -503,20 +547,12 @@ const COMET_LEG_DIST_MS = 2600; // extra time scaled by leg length
 const COMET_HOLD_MS = 300;      // brief beat on arrival at each city
 const COMET_LABEL_MS = 1300;    // how long the arrival label lingers
 
-// Ordered legs straight from the journey (keeps returns; not deduped)
-const COMET_LEGS = [];
-for (let i = 0; i < JOURNEY.length - 1; i++) {
-    if (JOURNEY[i] !== JOURNEY[i + 1]) COMET_LEGS.push([JOURNEY[i], JOURNEY[i + 1]]);
-}
-
 // Geo ↔ unit vector + great-circle slerp (so the comet follows the arc's curve)
 const _toVec = (lat, lng) => {
     const a = lat * Math.PI / 180, b = lng * Math.PI / 180;
     return [Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a)];
 };
 const _toLatLng = v => [Math.asin(v[2]) * 180 / Math.PI, Math.atan2(v[1], v[0]) * 180 / Math.PI];
-
-const ARC_ALT_SCALE = 0.28; // tuned so the Bézier peak matches globe.gl's rendered arc altitude
 
 // lat/lng/alt → 3D point (sphere radius 1, +alt above surface)
 function _cart(lat, lng, alt) {
@@ -526,26 +562,42 @@ function _cart(lat, lng, alt) {
 
 // Each leg as a 3D cubic Bézier — the SAME construction globe.gl uses for arcs
 // (control points at the great-circle quarter-points, lifted to altitude×1.5),
-// so the comet rides exactly on the drawn arc.
-const COMET_PATH = COMET_LEGS.map(([a, b]) => {
-    const va = _toVec(a.lat, a.lng), vb = _toVec(b.lat, b.lng);
-    const omega = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
-    const so = Math.sin(omega) || 1;
-    const gc = f => {
-        const f1 = Math.sin((1 - f) * omega) / so, f2 = Math.sin(f * omega) / so;
-        return _toLatLng([f1 * va[0] + f2 * vb[0], f1 * va[1] + f2 * vb[1], f1 * va[2] + f2 * vb[2]]);
-    };
-    const A = ARC_ALT_SCALE * 2 * Math.sin(omega / 2); // auto-altitude basis (chord)
-    const m1 = gc(0.25), m2 = gc(0.75);
-    return {
-        a, b, omega,
-        dur: COMET_LEG_BASE_MS + (omega / Math.PI) * COMET_LEG_DIST_MS,
-        P0: _cart(a.lat, a.lng, 0),
-        P1: _cart(m1[0], m1[1], A * 1.5),
-        P2: _cart(m2[0], m2[1], A * 1.5),
-        P3: _cart(b.lat, b.lng, 0),
-    };
-});
+// so the comet rides exactly on the drawn arc. Legs come straight from the
+// ordered waypoints (returns kept, consecutive repeats skipped).
+function buildCometPath(waypoints) {
+    const path = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const a = waypoints[i], b = waypoints[i + 1];
+        if (a === b) continue;
+        const va = _toVec(a.lat, a.lng), vb = _toVec(b.lat, b.lng);
+        const omega = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+        const so = Math.sin(omega) || 1;
+        const gc = f => {
+            const f1 = Math.sin((1 - f) * omega) / so, f2 = Math.sin(f * omega) / so;
+            return _toLatLng([f1 * va[0] + f2 * vb[0], f1 * va[1] + f2 * vb[1], f1 * va[2] + f2 * vb[2]]);
+        };
+        const A = legApexAlt(a.lat, a.lng, b.lat, b.lng); // same apex as the drawn arc (returns dip)
+        const m1 = gc(0.25), m2 = gc(0.75);
+        path.push({
+            a, b, omega,
+            dur: COMET_LEG_BASE_MS + (omega / Math.PI) * COMET_LEG_DIST_MS,
+            P0: _cart(a.lat, a.lng, 0),
+            P1: _cart(m1[0], m1[1], A * 1.5),
+            P2: _cart(m2[0], m2[1], A * 1.5),
+            P3: _cart(b.lat, b.lng, 0),
+        });
+    }
+    return path;
+}
+let COMET_PATH = buildCometPath(JOURNEY);
+
+// Swap in a longer trail when auto-tracked travel arrives. The curated journey
+// is always the prefix, so the leg the comet is mid-flight on is unchanged and
+// the replay carries straight on into the new legs on its next pass.
+function setCometWaypoints(waypoints) {
+    COMET_PATH = buildCometPath(waypoints);
+    if (legIdx >= COMET_PATH.length) { legIdx = 0; legT = 0; }
+}
 
 // Comet head + arrival label DOM (positioned each frame via getScreenCoords);
 // the trail is drawn analytically on a canvas overlay — sampled from the leg's

@@ -95,10 +95,22 @@ without them enquiries only land in KV).
   (`.pin-glow-persistent.night`). Dials: night alpha `0.52` + tint
   `vec4(0.006, 0.006, 0.016, …)` in the fragment shader; warm-glow CSS.
 - **Travel trail** — curated 2026 journey (`HOME` → `PLACES` → `JOURNEY`,
-  round-trips from the Jakarta hub, deduped undirected `buildArcs()`) as the
-  base, with **auto-tracked stops** (`applyLocations()`) appended on top as
-  new dots + arcs once real travel is recorded in `location_history`.
-  Arcs are smooth (128-seg) with a gentle flowing shimmer fading out from Jakarta.
+  round-trips from the Jakarta hub) as the base, with **auto-tracked stops**
+  (`applyLocations()`) appended once real travel is recorded in
+  `location_history`. `trailWaypoints()` is the **one ordered waypoint list**
+  both the arcs and the comet are built from, rebuilt on every data refresh:
+  `JOURNEY` + each recorded stop after `JOURNEY_END` (earlier pings are
+  already curated), snapped by `snapStop()` onto HOME / a curated stop / an
+  auto stop within 60 km — so a return home lands exactly on Jakarta, and a
+  trip still in progress simply has no return leg yet.
+  **Return flights are drawn:** `buildArcs()` dedupes *directed* (A→B ≠ B→A),
+  so a round trip draws the outbound AND the return, and `legApexAlt()` bows
+  every homebound leg to 60% of its distance-scaled height — a tall arc out,
+  a shallow arc back (clearest from side-on views; head-on the two nearly
+  overlap, but their dashes flow in opposite directions). Arc colour runs
+  dim→bright toward the destination. Arcs are smooth (128-seg).
+  ⚠️ `legApexAlt()` is the single source of arc height — the comet's Bézier
+  apex uses it too, so its trail rides the drawn arc (returns included).
   ⚠️ Bali sits slightly over water — 110m GeoJSON drops small islands (known, accepted).
 - **Pins** — live location = small white beacon + CSS glow overlay; travel
   stops (curated + auto) = periwinkle dots. Each has a large invisible hit-target for easy hover.
