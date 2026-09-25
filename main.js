@@ -84,27 +84,32 @@ const HOME = { name: 'Jakarta, Indonesia', lat: -6.2088, lng: 106.8456 };
 
 // Places visited (deduped), with coords and the date(s) there
 const PLACES = {
+    Shanghai:  { name: 'Shanghai, China',      date: 'Sep 2025 & 5 Sep 2026', lat: 31.2304,  lng: 121.4737 },
     Bali:      { name: 'Bali, Indonesia',      date: '15 Jan 2026',      lat: -8.4095,  lng: 115.1889 },
-    Tasmania:  { name: 'Tasmania, Australia',  date: '16 Mar 2026',      lat: -42.8821, lng: 147.3272 },
     Melbourne: { name: 'Melbourne, Australia', date: '21 Mar 2026',      lat: -37.8136, lng: 144.9631 },
-    Shanghai:  { name: 'Shanghai, China',      date: '16 Apr 2026',      lat: 31.2304,  lng: 121.4737 },
+    Tasmania:  { name: 'Tasmania, Australia',  date: '16 Mar 2026',      lat: -42.8821, lng: 147.3272 },
     Rome:      { name: 'Rome, Italy',          date: '16 & 24 Apr 2026', lat: 41.9028,  lng: 12.4964 },
     Florence:  { name: 'Florence, Italy',      date: '18 Apr 2026',      lat: 43.7696,  lng: 11.2558 },
-    Milan:     { name: 'Milan, Italy',         date: '20 Apr 2026',      lat: 45.4642,  lng: 9.1900 },
     Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
+    Miami:     { name: 'Miami, Florida, USA',  date: 'Apr 2026',         lat: 25.7617,  lng: -80.1918 },
+    Singapore: { name: 'Singapore',            date: '4 Sep 2026',       lat: 1.3521,   lng: 103.8198 },
 };
 
 // Chronological journey as round-trips out of Jakarta (each trip returns home)
 const JOURNEY = [
-    HOME, PLACES.Bali, HOME,                                   // Jan: Bali return
-    PLACES.Tasmania, PLACES.Melbourne, HOME,                   // Mar: Tasmania → Melbourne → home
-    PLACES.Shanghai, PLACES.Rome, PLACES.Florence,             // Apr: Shanghai → Italy …
-    PLACES.Milan, PLACES.Rome, PLACES.Naples, PLACES.Rome, HOME, // … → Florida → Rome → home
+    HOME, PLACES.Shanghai, HOME,                                         // Sep 2025: Shanghai, direct
+    PLACES.Bali, HOME,                                                   // Jan: Bali
+    PLACES.Melbourne, PLACES.Tasmania, PLACES.Melbourne, HOME,           // Mar: Melbourne ⇄ Tasmania
+    PLACES.Rome, PLACES.Florence, PLACES.Rome,                           // Apr: Italy …
+    PLACES.Naples, PLACES.Miami, PLACES.Rome, HOME,                      // … → Florida → back via Rome
+    PLACES.Singapore, PLACES.Shanghai, HOME,                             // Sep 2026: Singapore → Shanghai
 ];
 
-// The curated JOURNEY covers everything up to here; auto-tracked pings from
-// before it are already on the trail and must not be flown a second time.
-const JOURNEY_END = Date.parse('2026-04-30T00:00:00+07:00');
+// The curated JOURNEY covers everything up to here (last arrival: Shanghai,
+// 5 Sep 2026); auto-tracked pings from before it are already on the trail and
+// must not be flown a second time. The return ping snaps onto HOME, which the
+// journey already ends on, so it's absorbed too. Bump this when curating a trip.
+const JOURNEY_END = Date.parse('2026-09-06T00:00:00+07:00');
 
 // Build arcs from an ordered waypoint list. Directed dedupe (A→B and B→A are
 // distinct) so a round trip draws BOTH the outbound and the return flight,
