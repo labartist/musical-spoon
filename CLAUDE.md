@@ -68,7 +68,7 @@ reveal panel system.
    painted cache if the fetch fails.
 4. `lat/lng` repositions the globe pin and triggers the Open-Meteo weather/timezone fetch.
    `locations` are reverse-geocoded (BigDataCloud, free/no-key) client-side and
-   appended onto the curated 2026 trail as new dots + arcs.
+   appended onto the curated trail as new dots + arcs.
 
 **KV keys:** `vitals` (latest snapshot), `vitals_history` (daily snapshots),
 `location_history` (deduped travel stops), `last_update_time` (rate-limit guard),
@@ -94,13 +94,14 @@ without them enquiries only land in KV).
   darkness, the live beacon cross-fades to a warm glow
   (`.pin-glow-persistent.night`). Dials: night alpha `0.52` + tint
   `vec4(0.006, 0.006, 0.016, …)` in the fragment shader; warm-glow CSS.
-- **Travel trail** — curated 2026 journey (`HOME` → `PLACES` → `JOURNEY`,
+- **Travel trail** — curated journey, Sep 2025 → Sep 2026 (`HOME` → `PLACES` → `JOURNEY`,
   round-trips from the Jakarta hub) as the base, with **auto-tracked stops**
   (`applyLocations()`) appended once real travel is recorded in
   `location_history`. `trailWaypoints()` is the **one ordered waypoint list**
   both the arcs and the comet are built from, rebuilt on every data refresh:
   `JOURNEY` + each recorded stop after `JOURNEY_END` (earlier pings are
-  already curated), snapped by `snapStop()` onto HOME / a curated stop / an
+  already curated — ⚠️ bump `JOURNEY_END` whenever a trip is added to
+  `JOURNEY`, or its tracked pings get flown a second time), snapped by `snapStop()` onto HOME / a curated stop / an
   auto stop within 60 km — so a return home lands exactly on Jakarta, and a
   trip still in progress simply has no return leg yet.
   **Return flights are drawn:** `buildArcs()` dedupes *directed* (A→B ≠ B→A),
