@@ -22,7 +22,7 @@ demo values and the contact form reports "couldn't send" — that's expected, no
   (~18:00–06:00 WIB).
 - Travel arcs + periwinkle city dots render.
 - Round trips draw **two** arcs — a tall one out, a shallow one home (spin
-  side-on to Jakarta⇄Bali or Rome⇄Naples FL to see them split); the comet
+  side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet
   flies out and back along them. New tracked travel extends both the arcs and
   the comet's route on the next data refresh.
 - Hover a city dot → "City — date" tooltip; hover the white pin → current city.
