@@ -18,8 +18,13 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - Day/night terminator: hexes on the sun-facing side bright periwinkle,
   night side dimmed navy, soft dusk band between — positioned correctly for
   the current UTC time (sun over ~15°E at noon UTC, drifting west).
-- Jakarta beacon: white by day, warm sodium glow while Jakarta is dark
-  (~18:00–06:00 WIB).
+- Pin glow: white while the **pin's** location is in daylight, warm sodium
+  glow once the sun is actually down there — it follows the pin, not Jakarta
+  (abroad it must stay white at midday). Switches at real sunset/sunrise, in
+  step with the globe shading under it.
+- Weather line: ☾ appears only on a clear night *after real sunset* at the
+  pin (Jakarta ≈ 17:40–18:20 depending on season) — never on a fixed 18:00.
+  Quick console check: `isDark(lat, lng)` agrees with what the globe shows.
 - Travel arcs + periwinkle city dots render.
 - Round trips draw **two** arcs — a tall one out, a shallow one home (spin
   side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet
@@ -33,8 +38,9 @@ demo values and the contact form reports "couldn't send" — that's expected, no
   tapered trail (a solid streak — never separate dots, even on fast legs).
 - Arrival popup (name only; "Home" subtitle for Jakarta) at every stop.
 - Trail eases into the city during the arrival hold, then regrows on departure.
-- ⚠️ Known open issue: comet/trail occasionally visible behind the globe near
-  the limb — don't chase it during unrelated changes (see CLAUDE.md).
+- Comet, trail and arrival popup disappear exactly at the globe's edge when
+  they pass behind it — never visible through the globe (exact depth test,
+  `isBehindGlobe()`; fixed 2026-07).
 - With OS reduced-motion enabled: no comet at all.
 
 ## Hero reveal panels (GitHub / LinkedIn / Parklane)
@@ -54,6 +60,10 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - Trend chart below (demo data locally; hidden live until ≥2 days are banked).
 - Label reads `<total> STEPS · PAST N DAYS`; total matches the sum of the plotted days.
 - Hover → date + per-metric tooltip that tracks the cursor.
+- `· So Far` appears only on the day still in progress **on the pin's clock**
+  — not on a finished day, even for a visitor in another timezone.
+- Freshness label: "x min/hr ago" for today's snapshot; "yesterday" between
+  midnight and the first push of the day (the numbers shown are yesterday's).
 
 ## Contact corner (bottom-right)
 - CONTACT label legible even over page content (dark text-shadow halo).

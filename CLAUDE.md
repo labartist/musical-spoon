@@ -254,7 +254,11 @@ Run through `CHECKLIST.md` after non-trivial changes.
 
 ## Branches
 
-Only `master` — everything is merged and stale branches were purged (2026-07).
+Only `master` — everything is merged and stale branches were purged (last:
+2026-10). PR sessions (e.g. iOS Claude) reuse `claude/jakarta-position-alignment-KZ2OU`;
+once its PR is merged it's safe to delete — the next session simply recreates it.
+Delete only branches that are fully merged (`git branch -r --merged origin/master`)
+and have no open PR.
 If a `vercel/*` branch appears, it's the Vercel dashboard's agent auto-generating
 an "integration" PR — those over-engineer (npm + Vite on a no-build site); prefer
 implementing the one-liner ourselves and deleting the bot branch.
