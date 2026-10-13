@@ -90,10 +90,16 @@ without them enquiries only land in KV).
   Three.js constructors are **borrowed from globe.gl's scene objects** (no
   extra library; `initTerminator()` retries while the scene builds, then
   gives up quietly if globe.gl internals ever change). Side effect (accepted):
-  travel dots + arc endpoints also dim on the night side. When Jakarta is in
-  darkness, the live beacon cross-fades to a warm glow
-  (`.pin-glow-persistent.night`). Dials: night alpha `0.52` + tint
+  travel dots + arc endpoints also dim on the night side. When the **live
+  pin's** location is dark (not Jakarta's — the pin travels), the beacon
+  cross-fades to a warm glow (`.pin-glow-persistent.night`, `syncPinNight()`,
+  re-run on every `setLocation`). Dials: night alpha `0.52` + tint
   `vec4(0.006, 0.006, 0.016, …)` in the fragment shader; warm-glow CSS.
+  ⚠️ **One sun for everything:** `isDark(lat, lng)` (plain geo math on
+  `subsolarPoint()`, threshold sin(−0.833°) = the standard sunrise/sunset line,
+  which is also the shader's dusk-band midpoint) drives both the beacon and the
+  weather line's ☾ icon — never reintroduce a fixed-hours night rule (the old
+  18:00–06:00 one showed ☾ in Rome daylight and ☀ after Jakarta sunsets).
 - **Travel trail** — curated journey, Sep 2025 → Sep 2026 (`HOME` → `PLACES` → `JOURNEY`,
   round-trips from the Jakarta hub) as the base, with **auto-tracked stops**
   (`applyLocations()`) appended once real travel is recorded in
@@ -119,6 +125,11 @@ without them enquiries only land in KV).
   "Current location" for the live pin.
 - **Auto-spin** — pauses while dragging/hovering the globe, eases back up to
   speed ~0.5s after 3s of stillness (`updateAutoSpin()` in the `trackPin` loop).
+- **No off-screen pause (deliberate)** — tried an `IntersectionObserver` +
+  globe.gl `pauseAnimation()`/`resumeAnimation()` (2026-10) and dropped it: the
+  page is short enough that the globe is almost never *fully* off-screen
+  (portrait phones still show ~⅔ of it at max scroll), and pausing while it's
+  partly visible would freeze the spin in view. Revisit if the page grows.
 - **Guided-replay comet** — merged (PR #44). Flies the journey
   chronologically. The trail is a **canvas overlay** (`.replay-trail-canvas`,
   DPR-aware, sized from the globe's WebGL canvas because globe.gl's wrapper
@@ -199,7 +210,12 @@ scoping if you touch it.
   *today*, still accumulating. `TREND_PAD_TOP`/`TREND_PAD_BOT` keep that point
   off the frame edge, an always-on dot marks the newest day (the hover dots
   only exist under a pointer), and today's tooltip is suffixed `· So Far` so a
-  part-day total doesn't read as a slump. The label carries the period's
+  part-day total doesn't read as a slump. "Today" = `pinDateKey()`, the date
+  on the **pin's** clock (`locationTimezone`, Jakarta until the weather lands),
+  because history rows are keyed to my phone's day — the visitor's own date
+  mislabels days across timezones. The freshness label uses the same clock:
+  a snapshot from a previous calendar day reads `yesterday` / `N d ago`, not
+  "1 hr ago" over a day that's already over. The label carries the period's
   step total (`<total> STEPS · PAST N DAYS`) — the day count is data-driven
   (`n = recent.length`), and the total reuses `TREND_FMT.steps`.
 

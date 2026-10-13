@@ -334,18 +334,33 @@ function subsolarPoint(d = new Date()) {
     return { lat: decl, lng: -((utcH + eotMin / 60) - 12) * 15 };
 }
 
+// Is the sun down at this spot? Same sun the terminator draws, as plain geo
+// math: sin(solar altitude) below sin(−0.833°), the standard sunrise/sunset
+// line (refraction + the sun's disc) — which is also the midpoint of the
+// shader's dusk band, so this always agrees with the shading on the globe.
+function isDark(lat, lng, d = new Date()) {
+    const s = subsolarPoint(d), r = Math.PI / 180;
+    const sinAlt = Math.sin(lat * r) * Math.sin(s.lat * r)
+        + Math.cos(lat * r) * Math.cos(s.lat * r) * Math.cos((lng - s.lng) * r);
+    return sinAlt < -0.01454;
+}
+
+// The live pin's glow warms up while *its* location is dark — not Jakarta's;
+// the pin travels with me
+function syncPinNight() {
+    const lat = pinLat !== null ? pinLat : HOME.lat;
+    const lng = pinLng !== null ? pinLng : HOME.lng;
+    persistentGlow.classList.toggle('night', isDark(lat, lng));
+}
+
 let nightShellUniforms = null;
 
 function updateSun() {
     const { lat, lng } = subsolarPoint();
     const c = globe.getCoords(lat, lng, 0);
     const len = Math.hypot(c.x, c.y, c.z) || 1;
-    const sun = { x: c.x / len, y: c.y / len, z: c.z / len };
-    if (nightShellUniforms) nightShellUniforms.sunDir.value.set(sun.x, sun.y, sun.z);
-    // Jakarta's beacon warms up while home sits in darkness
-    const h = globe.getCoords(HOME.lat, HOME.lng, 0);
-    const hLen = Math.hypot(h.x, h.y, h.z) || 1;
-    persistentGlow.classList.toggle('night', (h.x * sun.x + h.y * sun.y + h.z * sun.z) / hLen < 0);
+    if (nightShellUniforms) nightShellUniforms.sunDir.value.set(c.x / len, c.y / len, c.z / len);
+    syncPinNight();
 }
 
 (function initTerminator(attempt = 0) {
@@ -418,6 +433,7 @@ function renderPoints() {
 function setLocation(lat, lng) {
     pinLat = lat;
     pinLng = lng;
+    syncPinNight(); // a new place may be on the other side of the terminator
     renderPoints();
     globe.ringsData([{ lat, lng }]); // pulse only on live location
     globe.pointOfView({ lat, lng, altitude: 2.5 }, 1000);
@@ -818,15 +834,31 @@ function setVitals({ steps, distance, calories }) {
     document.getElementById('calories').textContent = Math.round(calories).toLocaleString();
 }
 
+// The pin's IANA timezone (from Open-Meteo) — null until the weather lands
+let locationTimezone = null;
+
+// YYYY-MM-DD on the clock where the pin is. History rows are keyed to my
+// phone's day, so the *visitor's* date would mislabel days across timezones.
+function pinDateKey(d = new Date()) {
+    return d.toLocaleDateString('en-CA', { timeZone: locationTimezone || 'Asia/Jakarta' });
+}
+
+let lastFreshIso = null;
 function setFreshness(iso) {
     const el = document.getElementById('vitals-updated');
     if (!el || !iso) return;
+    lastFreshIso = iso;
     const diff = (Date.now() - new Date(iso).getTime()) / 1000;
     if (diff < 0 || isNaN(diff)) { el.textContent = ''; return; }
-    const txt = diff < 120 ? 'just now'
+    // Calendar days back on the pin's clock: after midnight (before the first
+    // push of the day) the numbers shown are yesterday's totals — say so,
+    // rather than "1 hr ago" over a day that's already over
+    const days = Math.round((Date.parse(pinDateKey()) - Date.parse(pinDateKey(new Date(iso)))) / 864e5);
+    const txt = days === 1 ? 'yesterday'
+        : days > 1 ? days + ' d ago'
+        : diff < 120 ? 'just now'
         : diff < 3600 ? Math.round(diff / 60) + ' min ago'
-        : diff < 86400 ? Math.round(diff / 3600) + ' hr ago'
-        : Math.round(diff / 86400) + ' d ago';
+        : Math.round(diff / 3600) + ' hr ago';
     el.textContent = txt;
 }
 
@@ -855,11 +887,6 @@ function fmtTrendDate(d) {
     if (!d) return '';
     const dt = new Date(d + 'T00:00:00');
     return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-}
-
-// Local YYYY-MM-DD (not UTC) — history rows are keyed to the device's day
-function localDateKey(d = new Date()) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Pinch-zoom anchoring for position:fixed tooltips. When zoomed on mobile,
@@ -951,7 +978,7 @@ function renderTrend(history) {
         const h = recent[i];
         // Flag the in-progress day: it reads as a slump otherwise, since it's
         // being compared against days that had all 24 hours to accumulate.
-        const dateLabel = fmtTrendDate(h.date) + (h.date === localDateKey() ? ' · So Far' : '');
+        const dateLabel = fmtTrendDate(h.date) + (h.date === pinDateKey() ? ' · So Far' : '');
         tip.innerHTML = `<span class="trend-tip-date">${dateLabel}</span>`
             + TREND_METRICS.map(({ key, color }) => `<span class="trend-tip-row"><i style="background:${color}"></i>${TREND_FMT[key](Number(h[key]) || 0)}</span>`).join('');
         tip.classList.add('show'); // show first so the tip has measurable dimensions
@@ -1079,7 +1106,6 @@ const WMO_CODES = {
     95: ['Thunderstorm', '⚡'], 96: ['Thunderstorm', '⚡'], 99: ['Thunderstorm', '⚡']
 };
 
-let locationTimezone = null;
 let currentCity = 'Jakarta'; // shown in the live-pin hover tooltip
 
 function fetchWeather(lat, lng) {
@@ -1090,13 +1116,12 @@ function fetchWeather(lat, lng) {
             const temp = Math.round(data.current.temperature_2m);
             const code = data.current.weather_code;
             const [condition, icon] = WMO_CODES[code] || ['', ''];
-            // Use moon icon at night (between 6pm and 6am local time)
-            const tz = data.timezone;
-            const hour = new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
-            const isNight = parseInt(hour) >= 18 || parseInt(hour) < 6;
-            const weatherIcon = (isNight && code <= 1) ? '☾' : icon;
+            // Moon on clear nights — "night" = the sun is actually down here (the
+            // globe's own sun), not a fixed 18:00–06:00 that ignores season/latitude
+            const weatherIcon = (isDark(lat, lng) && code <= 1) ? '☾' : icon;
             document.getElementById('weather').textContent = `${weatherIcon} ${temp}°C ${condition}`;
             locationTimezone = data.timezone;
+            setFreshness(lastFreshIso); // re-date it on this place's clock
             // Show city from timezone (e.g. "Asia/Jakarta" → "Jakarta")
             const city = data.timezone.split('/').pop().replace(/_/g, ' ');
             currentCity = city;
