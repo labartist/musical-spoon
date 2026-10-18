@@ -440,21 +440,27 @@ function setLocation(lat, lng) {
 }
 
 // ── Auto-tracked travel (location_history) ────────────
-// Reverse-geocode a coord → "City, Country" (free, no key), cached
+// Reverse-geocode a coord → { city, country } (free, no key), cached per ~1km
+// cell. Failures aren't cached, so the next refresh retries.
 const _geoCache = {};
-async function reverseGeocode(lat, lng) {
+async function geocodeParts(lat, lng) {
     const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
     if (_geoCache[key]) return _geoCache[key];
     try {
         const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
         const d = await r.json();
-        const city = d.city || d.locality || d.principalSubdivision || '';
-        const name = city ? `${city}, ${d.countryName}` : (d.countryName || key);
-        _geoCache[key] = name;
-        return name;
+        const parts = { city: d.city || d.locality || d.principalSubdivision || '', country: d.countryName || '' };
+        _geoCache[key] = parts;
+        return parts;
     } catch (e) {
-        return key;
+        return { city: '', country: '' };
     }
+}
+
+// "City, Country" for a travel-stop tooltip
+async function reverseGeocode(lat, lng) {
+    const { city, country } = await geocodeParts(lat, lng);
+    return city ? `${city}, ${country}` : (country || `${lat.toFixed(2)},${lng.toFixed(2)}`);
 }
 
 // Merge KV location history onto the curated base: new stops become dots + arcs.
@@ -1107,8 +1113,13 @@ const WMO_CODES = {
 };
 
 let currentCity = 'Jakarta'; // shown in the live-pin hover tooltip
+let weatherPin = null; // `lat,lng` of the latest fetchWeather call
+let cityPin = null;    // `lat,lng` the label's exact (geocoded) city belongs to
 
 function fetchWeather(lat, lng) {
+    const pin = `${lat},${lng}`;
+    weatherPin = pin;
+    if (cityPin !== pin) nameCity(lat, lng, pin);
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=auto`;
     fetch(url)
         .then(r => r.ok ? r.json() : Promise.reject())
@@ -1122,12 +1133,29 @@ function fetchWeather(lat, lng) {
             document.getElementById('weather').textContent = `${weatherIcon} ${temp}°C ${condition}`;
             locationTimezone = data.timezone;
             setFreshness(lastFreshIso); // re-date it on this place's clock
-            // Show city from timezone (e.g. "Asia/Jakarta" → "Jakarta")
-            const city = data.timezone.split('/').pop().replace(/_/g, ' ');
-            currentCity = city;
-            document.getElementById('location-label').textContent = `Local Time — ${city}`;
+            // Fallback name from the zone ("America/New_York" → "New York") —
+            // only until the geocoder names the pin itself, never over it
+            if (cityPin !== pin) setCity(data.timezone.split('/').pop().replace(/_/g, ' '));
         })
         .catch(() => {});
+}
+
+function setCity(city) {
+    currentCity = city;
+    document.getElementById('location-label').textContent = `Local Time — ${city}`;
+}
+
+// Name the clock after the pin's actual city. The IANA zone only names the
+// zone's anchor city — Greensboro, NC reports America/New_York — so that's just
+// the fallback. Within 60km of home it stays "Jakarta" (a geocoder may return a
+// district like "South Jakarta"; same radius the trail snaps home with).
+function nameCity(lat, lng, pin) {
+    if (kmBetween(lat, lng, HOME.lat, HOME.lng) < 60) { cityPin = pin; setCity('Jakarta'); return; }
+    geocodeParts(lat, lng).then(({ city }) => {
+        if (!city || weatherPin !== pin) return; // failed, or the pin has moved on since
+        cityPin = pin;
+        setCity(city);
+    });
 }
 
 function updateLocalTime() {

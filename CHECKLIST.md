@@ -25,6 +25,9 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - Weather line: ☾ appears only on a clear night *after real sunset* at the
   pin (Jakarta ≈ 17:40–18:20 depending on season) — never on a fixed 18:00.
   Quick console check: `isDark(lat, lng)` agrees with what the globe shows.
+- `LOCAL TIME — <city>` names the pin's actual city, not its timezone's
+  anchor city (in Greensboro it says Greensboro, not New York); at home it
+  says Jakarta. Console: `currentCity`.
 - Travel arcs + periwinkle city dots render.
 - Round trips draw **two** arcs — a tall one out, a shallow one home (spin
   side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet

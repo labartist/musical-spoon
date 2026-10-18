@@ -15,7 +15,7 @@ reveal panel system.
   (`globe.gl@2.46.1`, `defer`) so a release can't break the terminator/comet
   internals borrow and no visitor pays the unpinned-redirect hop; Natural Earth
   110m GeoJSON **self-hosted** in the repo root (same-origin via Vercel's CDN)
-- **Weather/time:** [Open-Meteo](https://open-meteo.com) API (free, no key) — also the source of the local timezone/city
+- **Weather/time:** [Open-Meteo](https://open-meteo.com) API (free, no key) — also the source of the local timezone (the clock); the city *name* comes from reverse-geocoding the pin (BigDataCloud), see Data flow 4
 - **GitHub activity:** [github-contributions-api.jogruber.de](https://github-contributions-api.jogruber.de) (free, no key)
 - **Backend:** Vercel serverless functions (`/api`, ESM) + Vercel KV (Upstash Redis)
 - **Fonts:** Inter (Google Fonts) — loaded via `<link>` + preconnect in the
@@ -67,6 +67,13 @@ reveal panel system.
    nothing moves twice. Demo values never write the cache, and never overwrite a
    painted cache if the fetch fails.
 4. `lat/lng` repositions the globe pin and triggers the Open-Meteo weather/timezone fetch.
+   The `LOCAL TIME — <city>` label is named by `nameCity()`: the pin's own
+   city via `geocodeParts()` (BigDataCloud, cached ~1km), **not** the IANA zone
+   — a zone only names its anchor city (Greensboro, NC reports
+   `America/New_York`). The zone name is just the fallback while the geocoder
+   is pending or down, and never overwrites a geocoded name (`cityPin` guard,
+   so the 5-min poll doesn't flicker). Within 60 km of home it's always
+   "Jakarta" (a geocoder may return a district).
    `locations` are reverse-geocoded (BigDataCloud, free/no-key) client-side and
    appended onto the curated trail as new dots + arcs.
 
