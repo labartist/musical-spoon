@@ -36,6 +36,7 @@ reveal panel system.
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
 | `og-image.png` | 1200×630 social share card (generated, dark themed). All text sits in the center ~830px so platform crops (e.g. LinkedIn Featured, ~1.32:1) can't cut it — keep new text inside that safe zone if regenerating |
 | `ne_110m_admin_0_countries.geojson` | Natural Earth 110m countries (public domain), self-hosted for the globe hex grid — replaces the old raw.githubusercontent fetch (mutable branch, weak caching) |
+| `metros.json` | 505 major metros — Natural Earth 10m populated places with urban-area pop ≥ 1M (public domain), as `[name, iso2, lat, lng, popK]` (~9 KB gzipped). Lazy-loaded by `mainCity()` only when a place away from home needs a name. Regenerate from `ne_10m_populated_places_simple.geojson` (`pop_max` ≥ 1,000,000; whitespace collapsed, `Ft.` → `Fort`) |
 | `CHECKLIST.md` | Manual verification checklist (run through after any change) |
 
 ## Data flow
@@ -74,6 +75,16 @@ reveal panel system.
    is pending or down, and never overwrites a geocoded name (`cityPin` guard,
    so the 5-min poll doesn't flicker). Within 60 km of home it's always
    "Jakarta" (a geocoder may return a district).
+   Geocoded names are snapped to the **main city** by `mainCity()` (inside
+   `geocodeParts()`, so the label *and* travel-stop dots get it): a geocoder
+   names the exact municipality (Boston Heights, OH; Bloomington, MN) when the
+   place people know is Cleveland / Minneapolis. Rule, against `metros.json`
+   (same country only — Windsor, ON never becomes Detroit): within
+   `METRO_IN_KM` (15) of a metro's centre you're *in* it, so it keeps its own
+   name (Yokohama, Fort Worth); otherwise the **most populous** metro within
+   `METRO_AREA_KM` (50) wins (Boston Heights → Cleveland 28 km, not nearer
+   but smaller Akron); otherwise the geocoder's name stands (Greensboro,
+   Bloomington IN). If `metros.json` can't load, the geocoder's name stands.
    `locations` are reverse-geocoded (BigDataCloud, free/no-key) client-side and
    appended onto the curated trail as new dots + arcs.
 
