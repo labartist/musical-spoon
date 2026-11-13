@@ -122,7 +122,7 @@ without them enquiries only land in KV).
   which is also the shader's dusk-band midpoint) drives both the beacon and the
   weather line's ☾ icon — never reintroduce a fixed-hours night rule (the old
   18:00–06:00 one showed ☾ in Rome daylight and ☀ after Jakarta sunsets).
-- **Travel trail** — curated journey, Sep 2025 → Oct 2026 (`HOME` → `PLACES` → `JOURNEY`,
+- **Travel trail** — curated journey, Sep 2025 → Nov 2026 (`HOME` → `PLACES` → `JOURNEY`,
   round-trips from the Jakarta hub) as the base, with **auto-tracked stops**
   (`applyLocations()`) appended once real travel is recorded in
   `location_history`. `trailWaypoints()` is the **one ordered waypoint list**
@@ -137,7 +137,8 @@ without them enquiries only land in KV).
   `location_history` is a rolling window and only holds places where a
   Shortcut push happened to land, so a finished trip should be curated into
   `PLACES`/`JOURNEY` (the Oct 2026 US trip went missing from the globe until
-  it was). ⚠️ **The trail never waits on the geocoder:** `applyLocations()`
+  it was — and when curating one trip, curate every later one too, since
+  `JOURNEY_END` hides all tracked pings before it). ⚠️ **The trail never waits on the geocoder:** `applyLocations()`
   draws dots/arcs/comet legs first and names the dots afterwards, in place
   (the comet's legs hold the same dot objects, so the arrival popup picks the
   name up; unnamed stops show no popup and a date-only tooltip).

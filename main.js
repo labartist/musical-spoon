@@ -98,6 +98,7 @@ const PLACES = {
     Minneapolis:  { name: 'Minneapolis, USA',   date: 'Oct 2026',    lat: 44.9778, lng: -93.2650 },
     Cleveland:    { name: 'Cleveland, USA',     date: 'Oct 2026',    lat: 41.4993, lng: -81.6944 },
     SanFrancisco: { name: 'San Francisco, USA', date: 'Oct 2026',    lat: 37.7749, lng: -122.4194 },
+    Taiwan:       { name: 'Taiwan',             date: 'Nov 2026',    lat: 25.0330, lng: 121.5654 },
 };
 
 // Chronological journey as round-trips out of Jakarta (each trip returns home)
@@ -111,10 +112,11 @@ const JOURNEY = [
     PLACES.Singapore, PLACES.NewYork, PLACES.HighPoint,                  // Oct 2026: US, out via Singapore …
     PLACES.Minneapolis, PLACES.Cleveland, PLACES.SanFrancisco,           // … across the States …
     PLACES.Singapore, HOME,                                              // … and home via Singapore
+    PLACES.Taiwan, HOME,                                                 // Nov 2026: Taiwan
 ];
 
-// The curated JOURNEY covers everything up to here (the Oct 2026 US trip and
-// its return). Auto-tracked pings from before it are already on the trail, so
+// The curated JOURNEY covers everything up to here (the Nov 2026 Taiwan trip
+// and its return). Auto-tracked pings from before it are already on the trail, so
 // they're ignored entirely — no dot, no arc, no second comet flight. A return
 // ping after it snaps onto HOME, which the journey already ends on, so it's
 // absorbed too. ⚠️ Bump this whenever a trip is added to JOURNEY.

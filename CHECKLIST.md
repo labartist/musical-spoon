@@ -39,7 +39,8 @@ demo values and the contact form reports "couldn't send" — that's expected, no
   the comet's route on the next data refresh.
 - The comet flies the whole curated journey in order, ending with the Oct 2026
   US trip (Singapore → New York → High Point → Minneapolis → Cleveland →
-  San Francisco → Singapore → Jakarta). Console:
+  San Francisco → Singapore → Jakarta) and then Jakarta → Taiwan → Jakarta.
+  Console:
   `COMET_PATH.map(l => l.a.name + ' → ' + l.b.name)`.
 - With the city lookup blocked (DevTools → block `api.bigdatacloud.net`), tracked
   stops still draw — only their names are missing.
