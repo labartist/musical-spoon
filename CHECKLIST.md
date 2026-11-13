@@ -37,6 +37,12 @@ demo values and the contact form reports "couldn't send" — that's expected, no
   side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet
   flies out and back along them. New tracked travel extends both the arcs and
   the comet's route on the next data refresh.
+- The comet flies the whole curated journey in order, ending with the Oct 2026
+  US trip (Singapore → New York → High Point → Minneapolis → Cleveland →
+  San Francisco → Singapore → Jakarta). Console:
+  `COMET_PATH.map(l => l.a.name + ' → ' + l.b.name)`.
+- With the city lookup blocked (DevTools → block `api.bigdatacloud.net`), tracked
+  stops still draw — only their names are missing.
 - Hover a city dot → "City — date" tooltip; hover the white pin → current city.
 - Drag it → spin pauses; release → eases back up after ~3s.
 
