@@ -440,8 +440,38 @@ function setLocation(lat, lng) {
 }
 
 // ── Auto-tracked travel (location_history) ────────────
-// Reverse-geocode a coord → { city, country } (free, no key), cached per ~1km
-// cell. Failures aren't cached, so the next refresh retries.
+// Major metros — Natural Earth populated places whose urban area is ≥ 1M
+// (public domain), as [name, iso2, lat, lng, popK]. Self-hosted and fetched
+// only when a place away from home needs a name; a failed load retries later.
+let _metros = null;
+function loadMetros() {
+    if (!_metros) {
+        _metros = fetch('/metros.json')
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .catch(() => { _metros = null; return []; });
+    }
+    return _metros;
+}
+
+// The main city a place belongs to, or null to keep the geocoder's own name.
+// Geocoders name the exact municipality — Boston Heights, OH or Bloomington, MN
+// — when the place people know is Cleveland or Minneapolis.
+const METRO_IN_KM = 15;   // this close to a metro's centre you're IN it — Yokohama, Fort Worth keep their names
+const METRO_AREA_KM = 50; // else the biggest metro this close — Boston Heights → Cleveland (not nearer, smaller Akron)
+async function mainCity(lat, lng, cc) {
+    let inCity = null, inKm = Infinity, area = null;
+    for (const m of await loadMetros()) {
+        if (cc && m[1] !== cc) continue; // never across a border (Windsor, ON is not Detroit)
+        const km = kmBetween(lat, lng, m[2], m[3]);
+        if (km < METRO_IN_KM && km < inKm) { inCity = m; inKm = km; }
+        if (km < METRO_AREA_KM && (!area || m[4] > area[4])) area = m;
+    }
+    return (inCity || area)?.[0] || null;
+}
+
+// Reverse-geocode a coord → { city, country } (free, no key), with the city
+// snapped to its main metro (mainCity), cached per ~1km cell. Failures aren't
+// cached, so the next refresh retries.
 const _geoCache = {};
 async function geocodeParts(lat, lng) {
     const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
@@ -449,7 +479,8 @@ async function geocodeParts(lat, lng) {
     try {
         const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
         const d = await r.json();
-        const parts = { city: d.city || d.locality || d.principalSubdivision || '', country: d.countryName || '' };
+        const city = d.city || d.locality || d.principalSubdivision || '';
+        const parts = { city: (city && await mainCity(lat, lng, d.countryCode)) || city, country: d.countryName || '' };
         _geoCache[key] = parts;
         return parts;
     } catch (e) {

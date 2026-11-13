@@ -28,6 +28,10 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - `LOCAL TIME — <city>` names the pin's actual city, not its timezone's
   anchor city (in Greensboro it says Greensboro, not New York); at home it
   says Jakarta. Console: `currentCity`.
+- Suburbs snap to their main city on the label and travel dots (Boston
+  Heights → Cleveland, Bloomington MN → Minneapolis), while real cities keep
+  their names (Greensboro, Fort Worth, Yokohama). Console:
+  `await mainCity(lat, lng, 'US')`.
 - Travel arcs + periwinkle city dots render.
 - Round trips draw **two** arcs — a tall one out, a shallow one home (spin
   side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet
