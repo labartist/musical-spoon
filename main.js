@@ -92,7 +92,13 @@ const PLACES = {
     Florence:  { name: 'Florence, Italy',      date: '18 Apr 2026',      lat: 43.7696,  lng: 11.2558 },
     Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
     Miami:     { name: 'Miami, Florida, USA',  date: 'Apr 2026',         lat: 25.7617,  lng: -80.1918 },
-    Singapore: { name: 'Singapore',            date: '4 Sep 2026',       lat: 1.3521,   lng: 103.8198 },
+    Singapore: { name: 'Singapore',            date: '4 Sep & Oct 2026', lat: 1.3521,   lng: 103.8198 },
+    NewYork:      { name: 'New York, USA',      date: 'Oct 2026',    lat: 40.7128, lng: -74.0060 },
+    HighPoint:    { name: 'High Point, USA',    date: '18 Oct 2026', lat: 35.9557, lng: -80.0053 },
+    Minneapolis:  { name: 'Minneapolis, USA',   date: 'Oct 2026',    lat: 44.9778, lng: -93.2650 },
+    Cleveland:    { name: 'Cleveland, USA',     date: 'Oct 2026',    lat: 41.4993, lng: -81.6944 },
+    SanFrancisco: { name: 'San Francisco, USA', date: 'Oct 2026',    lat: 37.7749, lng: -122.4194 },
+    Taiwan:       { name: 'Taiwan',             date: 'Nov 2026',    lat: 25.0330, lng: 121.5654 },
 };
 
 // Chronological journey as round-trips out of Jakarta (each trip returns home)
@@ -103,13 +109,18 @@ const JOURNEY = [
     PLACES.Rome, PLACES.Florence, PLACES.Rome,                           // Apr: Italy …
     PLACES.Naples, PLACES.Miami, PLACES.Rome, HOME,                      // … → Florida → back via Rome
     PLACES.Singapore, PLACES.Shanghai, HOME,                             // Sep 2026: Singapore → Shanghai
+    PLACES.Singapore, PLACES.NewYork, PLACES.HighPoint,                  // Oct 2026: US, out via Singapore …
+    PLACES.Minneapolis, PLACES.Cleveland, PLACES.SanFrancisco,           // … across the States …
+    PLACES.Singapore, HOME,                                              // … and home via Singapore
+    PLACES.Taiwan, HOME,                                                 // Nov 2026: Taiwan
 ];
 
-// The curated JOURNEY covers everything up to here (last arrival: Shanghai,
-// 5 Sep 2026); auto-tracked pings from before it are already on the trail and
-// must not be flown a second time. The return ping snaps onto HOME, which the
-// journey already ends on, so it's absorbed too. Bump this when curating a trip.
-const JOURNEY_END = Date.parse('2026-09-06T00:00:00+07:00');
+// The curated JOURNEY covers everything up to here (the Nov 2026 Taiwan trip
+// and its return). Auto-tracked pings from before it are already on the trail, so
+// they're ignored entirely — no dot, no arc, no second comet flight. A return
+// ping after it snaps onto HOME, which the journey already ends on, so it's
+// absorbed too. ⚠️ Bump this whenever a trip is added to JOURNEY.
+const JOURNEY_END = Date.parse('2026-11-13T00:00:00+07:00');
 
 // Build arcs from an ordered waypoint list. Directed dedupe (A→B and B→A are
 // distinct) so a round trip draws BOTH the outbound and the return flight,
@@ -192,7 +203,8 @@ const globe = Globe()(globeEl)
         if (d.kind === 'live') {
             return `<div class="globe-tip"><span class="globe-tip-name">${currentCity}</span><span class="globe-tip-sub">Current location</span></div>`;
         }
-        return `<div class="globe-tip"><span class="globe-tip-name">${d.name}</span><span class="globe-tip-sub">${d.date}</span></div>`;
+        const title = d.name ? `<span class="globe-tip-name">${d.name}</span>` : ''; // not named yet
+        return `<div class="globe-tip">${title}<span class="globe-tip-sub">${d.date}</span></div>`;
     })
     // Travel arcs — chronological journey path
     .arcsData(TRAVEL_ARCS)
@@ -470,49 +482,76 @@ async function mainCity(lat, lng, cc) {
 }
 
 // Reverse-geocode a coord → { city, country } (free, no key), with the city
-// snapped to its main metro (mainCity), cached per ~1km cell. Failures aren't
-// cached, so the next refresh retries.
+// snapped to its main metro (mainCity), cached per ~1km cell. A stalled lookup
+// is abandoned after GEO_TIMEOUT_MS, and failures (timeouts, HTTP errors, empty
+// answers) aren't cached, so the next refresh retries.
+const GEO_TIMEOUT_MS = 8000;
 const _geoCache = {};
+const geoKey = (lat, lng) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
 async function geocodeParts(lat, lng) {
-    const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+    const key = geoKey(lat, lng);
     if (_geoCache[key]) return _geoCache[key];
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), GEO_TIMEOUT_MS);
     try {
-        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`, { signal: ctl.signal });
+        if (!r.ok) throw new Error(`geocoder ${r.status}`);
         const d = await r.json();
         const city = d.city || d.locality || d.principalSubdivision || '';
         const parts = { city: (city && await mainCity(lat, lng, d.countryCode)) || city, country: d.countryName || '' };
-        _geoCache[key] = parts;
+        if (parts.city || parts.country) _geoCache[key] = parts;
         return parts;
     } catch (e) {
         return { city: '', country: '' };
+    } finally {
+        clearTimeout(timer);
     }
 }
 
-// "City, Country" for a travel-stop tooltip
+// "City, Country" for a travel-stop tooltip — '' while unknown
+const placeName = p => !p ? '' : (p.city ? `${p.city}, ${p.country}` : p.country);
 async function reverseGeocode(lat, lng) {
-    const { city, country } = await geocodeParts(lat, lng);
-    return city ? `${city}, ${country}` : (country || `${lat.toFixed(2)},${lng.toFixed(2)}`);
+    return placeName(await geocodeParts(lat, lng));
 }
 
-// Merge KV location history onto the curated base: new stops become dots + arcs.
-// Skips pings near home (the live pin) and de-dupes by proximity (~60km).
-async function applyLocations(locations) {
-    if (!Array.isArray(locations) || !locations.length) return;
+// Merge KV location history onto the curated base: stops recorded after the
+// curated journey become dots + arcs + comet legs (pings near home are the live
+// pin; stops within ~60km of an existing dot are that dot).
+// The trail is drawn straight away from the raw coordinates and the city names
+// fill in as the geocoder answers — a slow or stalled lookup must never hold
+// the trail back (it used to: nothing was drawn until every stop was named).
+let _trailSig = ''; // the tracked stops currently on the globe
+function applyLocations(locations) {
+    const fresh = Array.isArray(locations) ? locations.filter(l => l && l.t >= JOURNEY_END) : [];
+    const sig = fresh.map(l => `${l.lat},${l.lng},${l.t}`).join('|');
+    if (sig === _trailSig) return; // nothing new since the last refresh — leave the globe alone
+    _trailSig = sig;
+
     const dots = [];
-    for (const loc of locations) {
+    for (const loc of fresh) {
         if (kmBetween(loc.lat, loc.lng, HOME.lat, HOME.lng) < 60) continue; // home → live pin
         if ([...TRAVEL_DOTS, ...dots].some(p => kmBetween(loc.lat, loc.lng, p.lat, p.lng) < 60)) continue; // dup
-        const name = await reverseGeocode(loc.lat, loc.lng);
         const date = new Date(loc.t).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-        dots.push({ name, date, lat: loc.lat, lng: loc.lng });
+        dots.push({ name: placeName(_geoCache[geoKey(loc.lat, loc.lng)]), date, lat: loc.lat, lng: loc.lng });
     }
     autoStops = dots;
     renderPoints();
     // Extend the trail through the recorded stops — arcs AND the comet, from
     // one waypoint list, so new travel (and its return home) shows up in both.
-    const waypoints = trailWaypoints(locations);
+    const waypoints = trailWaypoints(fresh);
     globe.arcsData(buildArcs(waypoints));
     setCometWaypoints(waypoints);
+
+    // Names arrive afterwards. Each dot is the same object the comet's legs
+    // point at, so naming it in place also names its arrival popup.
+    for (const dot of dots) {
+        if (dot.name) continue;
+        reverseGeocode(dot.lat, dot.lng).then(name => {
+            if (!name) return;
+            dot.name = name;
+            if (autoStops.includes(dot)) renderPoints();
+        });
+    }
 }
 
 // A raw ping snapped onto a known place, so arcs land exactly on its dot and
@@ -836,7 +875,7 @@ function hideComet() {
     }
 
     // Lingering arrival label at its city
-    if (labelCity && now < labelUntil) {
+    if (labelCity && labelCity.name && now < labelUntil) { // unnamed stop → no empty popup
         if (cometLabel.dataset.city !== labelCity.name) {
             cometLabel.dataset.city = labelCity.name;
             // Name only — dates live on the pin hover tooltips; "Home" keeps
@@ -1065,11 +1104,14 @@ const DEMO_HISTORY = [
 
 // Sample auto-tracked stops so the append is visible in local/demo mode.
 // Realistic: each trip returns to Jakarta (just like real pings record it).
+// Timestamps are "N days ago" but never older than JOURNEY_END — pings from
+// the curated period are ignored, and the demo must not vanish with them.
+const demoT = (daysAgo, hrs) => Math.max(Date.now() - daysAgo * 864e5, JOURNEY_END + hrs * 36e5);
 const DEMO_LOCATIONS = [
-    { lat: 1.3521,  lng: 103.8198, t: Date.now() - 12 * 864e5 }, // Singapore
-    { lat: -6.2088, lng: 106.8456, t: Date.now() - 10 * 864e5 }, // ← home to Jakarta
-    { lat: 35.6762, lng: 139.6503, t: Date.now() -  4 * 864e5 }, // Tokyo
-    { lat: -6.2088, lng: 106.8456, t: Date.now() -  2 * 864e5 }, // ← home to Jakarta
+    { lat: 1.3521,  lng: 103.8198, t: demoT(12, 1) }, // Singapore
+    { lat: -6.2088, lng: 106.8456, t: demoT(10, 2) }, // ← home to Jakarta
+    { lat: 35.6762, lng: 139.6503, t: demoT(4, 3) },  // Tokyo
+    { lat: -6.2088, lng: 106.8456, t: demoT(2, 4) },  // ← home to Jakarta
 ];
 
 // Instant paint from the previous visit's payload — repeat visitors otherwise
