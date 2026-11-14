@@ -92,7 +92,7 @@ const PLACES = {
     Florence:  { name: 'Florence, Italy',      date: '18 Apr 2026',      lat: 43.7696,  lng: 11.2558 },
     Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
     Miami:     { name: 'Miami, Florida, USA',  date: 'Apr 2026',         lat: 25.7617,  lng: -80.1918 },
-    Singapore: { name: 'Singapore',            date: '4 Sep & Oct 2026', lat: 1.3521,   lng: 103.8198 },
+    Singapore: { name: 'Singapore',            date: '4 Sep, 14 & 24 Oct 2026', lat: 1.3521, lng: 103.8198 },
     NewYork:      { name: 'New York, USA',      date: '14 Oct 2026', lat: 40.7128, lng: -74.0060 },
     HighPoint:    { name: 'High Point, USA',    date: '16 Oct 2026', lat: 35.9557, lng: -80.0053 },
     Minneapolis:  { name: 'Minneapolis, USA',   date: '18 Oct 2026', lat: 44.9778, lng: -93.2650 },
