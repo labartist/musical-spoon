@@ -93,12 +93,12 @@ const PLACES = {
     Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
     Miami:     { name: 'Miami, Florida, USA',  date: 'Apr 2026',         lat: 25.7617,  lng: -80.1918 },
     Singapore: { name: 'Singapore',            date: '4 Sep & Oct 2026', lat: 1.3521,   lng: 103.8198 },
-    NewYork:      { name: 'New York, USA',      date: 'Oct 2026',    lat: 40.7128, lng: -74.0060 },
-    HighPoint:    { name: 'High Point, USA',    date: '18 Oct 2026', lat: 35.9557, lng: -80.0053 },
-    Minneapolis:  { name: 'Minneapolis, USA',   date: 'Oct 2026',    lat: 44.9778, lng: -93.2650 },
-    Cleveland:    { name: 'Cleveland, USA',     date: 'Oct 2026',    lat: 41.4993, lng: -81.6944 },
-    SanFrancisco: { name: 'San Francisco, USA', date: 'Oct 2026',    lat: 37.7749, lng: -122.4194 },
-    Taiwan:       { name: 'Taiwan',             date: 'Nov 2026',    lat: 25.0330, lng: 121.5654 },
+    NewYork:      { name: 'New York, USA',      date: '14 Oct 2026', lat: 40.7128, lng: -74.0060 },
+    HighPoint:    { name: 'High Point, USA',    date: '16 Oct 2026', lat: 35.9557, lng: -80.0053 },
+    Minneapolis:  { name: 'Minneapolis, USA',   date: '18 Oct 2026', lat: 44.9778, lng: -93.2650 },
+    Cleveland:    { name: 'Cleveland, USA',     date: '19 Oct 2026', lat: 41.4993, lng: -81.6944 },
+    SanFrancisco: { name: 'San Francisco, USA', date: '21 Oct 2026', lat: 37.7749, lng: -122.4194 },
+    Taiwan:       { name: 'Taiwan',             date: '8 Nov 2026',  lat: 25.0330, lng: 121.5654 },
 };
 
 // Chronological journey as round-trips out of Jakarta (each trip returns home)
@@ -978,10 +978,21 @@ function visualViewportBox() {
 
 // One subtle chart: each metric normalized to its own range, overlaid (they move
 // together, so it reads as a single weekly trend). Hover a day → guide + tooltip.
+// The chart's window: 7 days, or all 14 the API sends. Tapping the label
+// switches between them; the choice is remembered per browser.
+const TREND_WINDOWS = [7, 14];
+let trendDays = 7;
+try { if (localStorage.getItem('trend_days') === '14') trendDays = 14; } catch (e) {}
+let trendHistory = null; // last history rendered, so the toggle can redraw without a fetch
+
 function renderTrend(history) {
     const el = document.getElementById('vitals-trend');
     if (!el) return;
-    const recent = Array.isArray(history) ? history.slice(-7) : [];
+    trendHistory = history;
+    const all = Array.isArray(history) ? history : [];
+    const recent = all.slice(-trendDays);
+    // Only offer the switch when the longer window would actually show more days
+    const canToggle = all.length > TREND_WINDOWS[0];
     if (recent.length < 2) { el.innerHTML = ''; el.style.display = 'none'; return; }
 
     const n = recent.length;
@@ -1015,8 +1026,21 @@ function renderTrend(history) {
     const legend = TREND_METRICS.map(({ label, color }) =>
         `<span class="trend-lg"><i style="background:${color}"></i>${label}</span>`).join('');
 
-    el.innerHTML = `<span class="trend-label"><span class="trend-total">${TREND_FMT.steps(totalSteps)}</span>Past ${n} days</span>${svg}<div class="trend-legend">${legend}</div>`;
+    const labelText = `<span class="trend-total">${TREND_FMT.steps(totalSteps)}</span>Past ${n} days`;
+    const other = TREND_WINDOWS.find(d => d !== trendDays);
+    const label = canToggle
+        ? `<button type="button" class="trend-label trend-toggle" aria-label="Past ${n} days. Show the past ${other} days instead">${labelText}</button>`
+        : `<span class="trend-label">${labelText}</span>`;
+    el.innerHTML = `${label}${svg}<div class="trend-legend">${legend}</div>`;
     el.style.display = 'flex';
+    const toggle = el.querySelector('.trend-toggle');
+    if (toggle) toggle.addEventListener('click', () => {
+        trendDays = other;
+        try { localStorage.setItem('trend_days', String(trendDays)); } catch (e) {}
+        renderTrend(trendHistory);
+        const next = el.querySelector('.trend-toggle');
+        if (next) next.focus({ preventScroll: true }); // keep keyboard focus on the rebuilt button
+    });
 
     // ── hover interaction ──
     const svgEl = el.querySelector('.trend-svg');
@@ -1089,6 +1113,13 @@ function renderTrend(history) {
 
 // Sample history so the trend chart renders in local/demo mode (dates = last 7 days)
 const DEMO_HISTORY = [
+    { steps: 7900,  distance: 5.8, calories: 330 },
+    { steps: 4300,  distance: 3.1, calories: 205 },
+    { steps: 10400, distance: 7.6, calories: 425 },
+    { steps: 8100,  distance: 5.9, calories: 335 },
+    { steps: 6200,  distance: 4.4, calories: 270 },
+    { steps: 12300, distance: 9.0, calories: 490 },
+    { steps: 9600,  distance: 7.0, calories: 395 },
     { steps: 5200,  distance: 3.9, calories: 240 },
     { steps: 9100,  distance: 6.8, calories: 380 },
     { steps: 7400,  distance: 5.2, calories: 310 },
