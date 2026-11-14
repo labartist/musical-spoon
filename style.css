@@ -417,6 +417,28 @@ h1 {
     color: #444;
 }
 
+/* The label doubles as the 7 ↔ 14 day switch — same look as the plain label,
+   it only brightens on hover/focus. */
+.trend-toggle {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.trend-toggle:hover,
+.trend-toggle:focus-visible {
+    color: #888;
+    outline: none;
+}
+
+.trend-toggle:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+}
+
 .trend-total {
     color: #666;
 }

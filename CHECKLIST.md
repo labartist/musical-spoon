@@ -73,6 +73,8 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - DAILY VITALS heading → steps/distance/calories values render.
 - Trend chart below (demo data locally; hidden live until ≥2 days are banked).
 - Label reads `<total> STEPS · PAST N DAYS`; total matches the sum of the plotted days.
+- Tap the trend label → switches `PAST 7 DAYS` ↔ `PAST 14 DAYS` (line, total
+  and tooltip follow); the choice survives a reload. Local demo has 14 days.
 - Hover → date + per-metric tooltip that tracks the cursor.
 - `· So Far` appears only on the day still in progress **on the pin's clock**
   — not on a finished day, even for a visitor in another timezone.

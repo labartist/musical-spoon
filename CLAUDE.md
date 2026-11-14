@@ -253,6 +253,12 @@ scoping if you touch it.
   "1 hr ago" over a day that's already over. The label carries the period's
   step total (`<total> STEPS · PAST N DAYS`) — the day count is data-driven
   (`n = recent.length`), and the total reuses `TREND_FMT.steps`.
+  The label is also the **7 ↔ 14 day switch** (`.trend-toggle`, a real
+  `<button>` styled exactly like the plain label; brightens on hover/focus):
+  the API already sends 14 days, so the switch costs no fetch — it re-renders
+  from `trendHistory`. The choice persists in `localStorage` (`trend_days`).
+  With ≤ 7 days banked there's nothing more to show, so it stays a plain
+  `<span>`. Total and day count follow the window.
 
 ## Local preview
 
