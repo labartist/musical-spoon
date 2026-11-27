@@ -37,14 +37,15 @@ demo values and the contact form reports "couldn't send" — that's expected, no
   side-on to Jakarta⇄Bali or Jakarta⇄Shanghai to see them split); the comet
   flies out and back along them. New tracked travel extends both the arcs and
   the comet's route on the next data refresh.
-- The comet flies the whole curated journey in order, ending with the Oct 2026
-  US trip (Singapore → New York → High Point → Minneapolis → Cleveland →
-  San Francisco → Singapore → Jakarta) and then Jakarta → Taiwan → Jakarta.
-  Console:
-  `COMET_PATH.map(l => l.a.name + ' → ' + l.b.name)`.
+- The comet flies the last 10 round trips in order; each arrival popup shows
+  the city and the date of *that* visit (Singapore: 4 Sep, then 14 Oct, then
+  24 Oct 2026; Jakarta: "Home"). Console:
+  `COMET_PATH.map(l => l.b.name + ' · ' + fmtVisit(l.bv.date))`.
+- With an 11th trip, the oldest one disappears entirely (dot, arcs, comet
+  legs, and its date from shared-city tooltips).
 - With the city lookup blocked (DevTools → block `api.bigdatacloud.net`), tracked
   stops still draw — only their names are missing.
-- Hover a city dot → "City — date" tooltip; hover the white pin → current city.
+- Hover a city dot → city + every visible visit ("4 Sep, 14 & 24 Oct 2026"); hover the white pin → current city.
 - Drag it → spin pauses; release → eases back up after ~3s.
 
 ## Replay comet
@@ -70,7 +71,7 @@ demo values and the contact form reports "couldn't send" — that's expected, no
 - Text links open the real profiles/sites in a new tab.
 
 ## Daily Vitals (always-on section)
-- DAILY VITALS heading → steps/distance/calories values render.
+- DAILY VITALS heading → steps / distance / ACTIVE CAL values render.
 - Trend chart below (demo data locally; hidden live until ≥2 days are banked).
 - Label reads `<total> STEPS · PAST N DAYS`; total matches the sum of the plotted days.
 - Tap the trend label → switches `PAST 7 DAYS` ↔ `PAST 14 DAYS` (line, total

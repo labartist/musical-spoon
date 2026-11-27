@@ -30,7 +30,7 @@ reveal panel system.
 | `index.html` | Single page: hero (name + GitHub/LinkedIn/Parklane reveal panels), globe, time/weather, Daily Vitals section (steps/distance/calories + trend), footer |
 | `style.css` | All styling. Dark theme: bg `#08080c`, text `#ececf0`, muted `#444`/`#666` |
 | `main.js` | Globe + travel trail + auto-tracking, vitals/weather/time fetch, hero-panel accordion animations, carousel drag-to-scroll, GitHub heatmap |
-| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (one row per device-local day — optional `date`/`tz` from the Shortcut, Jakarta fallback; today's row merges by per-metric max so a stale push can't wipe totals, while a `days` entry for a *past* day replaces — a closed day's Health total is authoritative, so over-counts self-correct downward; zero metrics keep the stored value; optional `days: [{date, steps, distance, calories}]`, ≤7 entries, future dates rejected; last 14 days), and appends distance-deduped stops to `location_history` (last 50) |
+| `api/update.js` | `POST /api/update` — Bearer-auth, rate-limited (1/30s); writes latest `vitals`, upserts a daily `vitals_history` snapshot (one row per device-local day — optional `date`/`tz` from the Shortcut, Jakarta fallback; today's row merges by per-metric max so a stale push can't wipe totals, while a `days` entry for a *past* day replaces — a closed day's Health total is authoritative, so over-counts self-correct downward; zero metrics keep the stored value; optional `days: [{date, steps, distance, calories}]`, ≤7 entries, future dates rejected; last 14 days), and appends distance-deduped stops to `location_history` (last 100) |
 | `api/data.js` | `GET /api/data` — reads `vitals` + `vitals_history` + `location_history` (60s cache), returns `{...vitals, history, locations}` |
 | `api/contact.js` | `POST /api/contact` — public enquiry box; honeypot + per-IP rate limit (1/min) + length caps; stores to KV list `enquiries` (newest first, cap 50; read in the Upstash data browser) and forwards to the inbox via Resend when `RESEND_API_KEY`/`CONTACT_EMAIL` are set (best-effort — KV write is the source of truth) |
 | `package.json` | `"type": "module"` (api/ is ESM) + `@vercel/kv` |
@@ -42,7 +42,8 @@ reveal panel system.
 ## Data flow
 
 1. **iOS Shortcut** (on Gary's phone) reads Apple Health (steps, distance,
-   calories) + GPS, `POST`s JSON to `/api/update` with `Authorization: Bearer <AUTH_KEY>`.
+   calories = **Active Energy**, shown as `ACTIVE CAL` — not total burn, which
+   would need Resting Energy too) + GPS, `POST`s JSON to `/api/update` with `Authorization: Bearer <AUTH_KEY>`.
 2. `update.js` validates auth + rate limit, stores the latest `vitals` object,
    upserts today's entry into `vitals_history` (one row per *device-local* day
    — the Shortcut may send `date` (YYYY-MM-DD) or `tz` (IANA name) in the JSON
@@ -59,9 +60,9 @@ reveal panel system.
    `Find Health Samples` credits the whole sample to its start day, so a walk
    across midnight shows as a transfer between adjacent days (not fixable
    server-side). Finally — if the ping is >80km from the last recorded stop —
-   it's appended to `location_history` (capped to 50 — it was 10, which one
-   multi-city trip plus a few day trips could roll off before it was curated;
-   dedupes daily movement).
+   it's appended to `location_history` (capped to 100 — enough for the
+   globe's last-10-trips view even if nothing is ever curated; it was once 10,
+   which one multi-city trip could roll off; dedupes daily movement).
 3. Browser `GET`s `/api/data` on load and every 5 min; falls back to demo
    values when the API 404s (e.g. local dev). Response includes `history` + `locations`.
    Repeat visits **instant-paint** vitals/trend/freshness from the last payload
@@ -123,7 +124,20 @@ without them enquiries only land in KV).
   weather line's ☾ icon — never reintroduce a fixed-hours night rule (the old
   18:00–06:00 one showed ☾ in Rome daylight and ☀ after Jakarta sunsets).
 - **Travel trail** — curated journey, Sep 2025 → Nov 2026 (`HOME` → `PLACES` → `JOURNEY`,
-  round-trips from the Jakarta hub) as the base, with **auto-tracked stops**
+  round-trips from the Jakarta hub) as the base. `JOURNEY` is a list of
+  **dated visits**, `at(place, 'YYYY-MM-DD')` (or `'YYYY-MM'` when only the
+  month is known; homecomings `at(HOME)` carry no date) — `PLACES` holds only
+  name + coords. A dot's tooltip lists its visible visits via `fmtDates()`
+  ("4 Sep, 14 & 24 Oct 2026"), and the comet's arrival popup shows *that*
+  visit's date (`fmtVisit()`), so repeat cities read in order.
+  **Only the last `TRIP_LIMIT` (10) round trips are shown** (`lastTrips()`;
+  a trip = leaving Jakarta until the next return, one in progress counts):
+  the globe stays about as busy as it is now however many years pile up.
+  `visibleTrail` is that slice — dots, arcs and comet all come from it, and a
+  place whose visits all fell off loses its dot. One dot per place and one
+  arc per directed route still; the comet flies every visit. When old trips
+  drop off the front mid-flight, `setCometWaypoints()` re-finds the comet's
+  current leg by its visit objects. Tracked stops on top: with **auto-tracked stops**
   (`applyLocations()`) appended once real travel is recorded in
   `location_history`. `trailWaypoints()` is the **one ordered waypoint list**
   both the arcs and the comet are built from, rebuilt on every data refresh:
@@ -133,12 +147,12 @@ without them enquiries only land in KV).
   get flown a second time), snapped by `snapStop()` onto HOME / a curated
   stop / an auto stop within 60 km — so a return home lands exactly on
   Jakarta, and a trip still in progress simply has no return leg yet.
-  ⚠️ **Tracked stops are temporary; `JOURNEY` is the permanent record.**
-  `location_history` is a rolling window and only holds places where a
-  Shortcut push happened to land, so a finished trip should be curated into
-  `PLACES`/`JOURNEY` (the Oct 2026 US trip went missing from the globe until
-  it was — and when curating one trip, curate every later one too, since
-  `JOURNEY_END` hides all tracked pings before it). ⚠️ **The trail never waits on the geocoder:** `applyLocations()`
+  Curating a finished trip into `PLACES`/`JOURNEY` is now **optional** —
+  it's for exact names/dates (tracked visits are dated by their ping, named
+  by the geocoder), since `location_history` (100) outlasts the 10 trips on
+  show. The Oct 2026 US trip went missing back when it held only 10 stops.
+  ⚠️ When curating one trip, curate every later one too — `JOURNEY_END`
+  hides all tracked pings before it. ⚠️ **The trail never waits on the geocoder:** `applyLocations()`
   draws dots/arcs/comet legs first and names the dots afterwards, in place
   (the comet's legs hold the same dot objects, so the arrival popup picks the
   name up; unnamed stops show no popup and a date-only tooltip).
@@ -180,8 +194,9 @@ without them enquiries only land in KV).
   epsilon so surface points don't self-occlude). This replaced the old
   analytic `horizonAngle()` estimate, which trusted `pointOfView().altitude`
   as the camera distance and let the comet/trail peek through near the limb.
-  Arrival popup (`.replay-label`) shows at every stop, Jakarta included, and
-  uses the same check. Tuning dials in main.js: `TRAIL_MS` (tail length),
+  Arrival popup (`.replay-label`) shows at every stop, Jakarta included —
+  city name + the date of that visit ("Home" for Jakarta) — and uses the
+  same check. Tuning dials in main.js: `TRAIL_MS` (tail length),
   `TRAIL_SAMPLES`, the `fade*fade` alpha curve + `rgba` peaks in the stroke
   loop, and `COMET_HOLD_MS` / `COMET_LEG_BASE_MS` / `COMET_LEG_DIST_MS`
   (pacing). Respects `prefers-reduced-motion` (comet off).
@@ -221,7 +236,7 @@ scoping if you touch it.
   `<details>`-based `.dropdown` pattern was fully deleted once nothing used it
   — resurrect from git history if ever needed.)
 - **Daily Vitals** — plain always-on `<section class="vitals">` (static
-  `DAILY VITALS` heading → steps/distance/calories grid → weekly trend chart),
+  `DAILY VITALS` heading → steps / distance / `ACTIVE CAL` grid → weekly trend chart),
   no longer collapsible.
 - **Contact corner** — fixed bottom-right `CONTACT` toggle (dark text-shadow
   halo for legibility over content) + compact enquiry card (subject/message/
