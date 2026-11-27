@@ -135,10 +135,10 @@ export default async function handler(req, res) {
 					const last = locs[locs.length - 1];
 					if (!last || haversineKm(last.lat, last.lng, data.lat, data.lng) > STOP_KM) {
 						locs.push({ lat: data.lat, lng: data.lng, t: now });
-						// Keep the last 50. This was 10, which a single multi-city
-						// trip plus a few day trips could roll right off the trail
-						// before it was curated into JOURNEY on the client.
-						locs = locs.slice(-50);
+						// Keep the last 100 — enough for the client's last-10-trips
+						// view even if no trip is ever curated into JOURNEY. (It was
+						// 10, which one multi-city trip could roll off.)
+						locs = locs.slice(-100);
 						await kv.set('location_history', locs);
 					}
 				}

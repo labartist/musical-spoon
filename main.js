@@ -82,37 +82,72 @@ const GEOJSON_URL = '/ne_110m_admin_0_countries.geojson';
 // ── Travel history (2026, round-trips from the Jakarta hub) ───────
 const HOME = { name: 'Jakarta, Indonesia', lat: -6.2088, lng: 106.8456 };
 
-// Places visited (deduped), with coords and the date(s) there
+// Places visited (deduped), with coords. Dates live on the visits in JOURNEY.
 const PLACES = {
-    Shanghai:  { name: 'Shanghai, China',      date: 'Sep 2025 & 5 Sep 2026', lat: 31.2304,  lng: 121.4737 },
-    Bali:      { name: 'Bali, Indonesia',      date: '15 Jan 2026',      lat: -8.4095,  lng: 115.1889 },
-    Melbourne: { name: 'Melbourne, Australia', date: '21 Mar 2026',      lat: -37.8136, lng: 144.9631 },
-    Tasmania:  { name: 'Tasmania, Australia',  date: '16 Mar 2026',      lat: -42.8821, lng: 147.3272 },
-    Rome:      { name: 'Rome, Italy',          date: '16 & 24 Apr 2026', lat: 41.9028,  lng: 12.4964 },
-    Florence:  { name: 'Florence, Italy',      date: '18 Apr 2026',      lat: 43.7696,  lng: 11.2558 },
-    Naples:    { name: 'Naples, Florida, USA', date: '25 Apr 2026',      lat: 26.1420,  lng: -81.7948 },
-    Miami:     { name: 'Miami, Florida, USA',  date: 'Apr 2026',         lat: 25.7617,  lng: -80.1918 },
-    Singapore: { name: 'Singapore',            date: '4 Sep, 14 & 24 Oct 2026', lat: 1.3521, lng: 103.8198 },
-    NewYork:      { name: 'New York, USA',      date: '14 Oct 2026', lat: 40.7128, lng: -74.0060 },
-    HighPoint:    { name: 'High Point, USA',    date: '16 Oct 2026', lat: 35.9557, lng: -80.0053 },
-    Minneapolis:  { name: 'Minneapolis, USA',   date: '18 Oct 2026', lat: 44.9778, lng: -93.2650 },
-    Cleveland:    { name: 'Cleveland, USA',     date: '19 Oct 2026', lat: 41.4993, lng: -81.6944 },
-    SanFrancisco: { name: 'San Francisco, USA', date: '21 Oct 2026', lat: 37.7749, lng: -122.4194 },
-    Taiwan:       { name: 'Taiwan',             date: '8 Nov 2026',  lat: 25.0330, lng: 121.5654 },
+    Shanghai:     { name: 'Shanghai, China',      lat: 31.2304,  lng: 121.4737 },
+    Bali:         { name: 'Bali, Indonesia',      lat: -8.4095,  lng: 115.1889 },
+    Melbourne:    { name: 'Melbourne, Australia', lat: -37.8136, lng: 144.9631 },
+    Tasmania:     { name: 'Tasmania, Australia',  lat: -42.8821, lng: 147.3272 },
+    Rome:         { name: 'Rome, Italy',          lat: 41.9028,  lng: 12.4964 },
+    Florence:     { name: 'Florence, Italy',      lat: 43.7696,  lng: 11.2558 },
+    Naples:       { name: 'Naples, Florida, USA', lat: 26.1420,  lng: -81.7948 },
+    Miami:        { name: 'Miami, Florida, USA',  lat: 25.7617,  lng: -80.1918 },
+    Singapore:    { name: 'Singapore',            lat: 1.3521,   lng: 103.8198 },
+    NewYork:      { name: 'New York, USA',        lat: 40.7128,  lng: -74.0060 },
+    HighPoint:    { name: 'High Point, USA',      lat: 35.9557,  lng: -80.0053 },
+    Minneapolis:  { name: 'Minneapolis, USA',     lat: 44.9778,  lng: -93.2650 },
+    Cleveland:    { name: 'Cleveland, USA',       lat: 41.4993,  lng: -81.6944 },
+    SanFrancisco: { name: 'San Francisco, USA',   lat: 37.7749,  lng: -122.4194 },
+    Taiwan:       { name: 'Taiwan',               lat: 25.0330,  lng: 121.5654 },
 };
+
+// A stop on the journey: a place + the day I arrived ('YYYY-MM-DD', or
+// 'YYYY-MM' when only the month is known). Homecomings carry no date.
+const at = (place, date) => ({ place, date });
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const andJoin = xs => xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} & ${xs[xs.length - 1]}`;
+
+// One visit → "14 Oct 2026" ("Oct 2026" when only the month is known)
+function fmtVisit(date) {
+    if (!date) return '';
+    const [y, m, d] = date.split('-');
+    return `${d ? Number(d) + ' ' : ''}${MONTHS[m - 1]} ${y}`;
+}
+
+// Every visit to one place, compact: "4 Sep, 14 & 24 Oct 2026",
+// "Sep 2025 & 5 Sep 2026". A month-only visit adds nothing to a month that
+// already has a dated one.
+function fmtDates(dates) {
+    const years = new Map();
+    for (const iso of [...dates].sort()) {
+        const [y, m, d] = iso.split('-');
+        if (!years.has(y)) years.set(y, new Map());
+        const months = years.get(y);
+        if (!months.has(m)) months.set(m, []);
+        if (d && !months.get(m).includes(Number(d))) months.get(m).push(Number(d));
+    }
+    return [...years].map(([y, months]) =>
+        [...months].map(([m, days]) => (days.length ? andJoin(days.map(String)) + ' ' : '') + MONTHS[m - 1]).join(', ') + ' ' + y
+    ).join(' & ');
+}
 
 // Chronological journey as round-trips out of Jakarta (each trip returns home)
 const JOURNEY = [
-    HOME, PLACES.Shanghai, HOME,                                         // Sep 2025: Shanghai, direct
-    PLACES.Bali, HOME,                                                   // Jan: Bali
-    PLACES.Melbourne, PLACES.Tasmania, PLACES.Melbourne, HOME,           // Mar: Melbourne ⇄ Tasmania
-    PLACES.Rome, PLACES.Florence, PLACES.Rome,                           // Apr: Italy …
-    PLACES.Naples, PLACES.Miami, PLACES.Rome, HOME,                      // … → Florida → back via Rome
-    PLACES.Singapore, PLACES.Shanghai, HOME,                             // Sep 2026: Singapore → Shanghai
-    PLACES.Singapore, PLACES.NewYork, PLACES.HighPoint,                  // Oct 2026: US, out via Singapore …
-    PLACES.Minneapolis, PLACES.Cleveland, PLACES.SanFrancisco,           // … across the States …
-    PLACES.Singapore, HOME,                                              // … and home via Singapore
-    PLACES.Taiwan, HOME,                                                 // Nov 2026: Taiwan
+    at(HOME),
+    at(PLACES.Shanghai, '2025-09'), at(HOME),                                    // Sep 2025: Shanghai, direct
+    at(PLACES.Bali, '2026-01-15'), at(HOME),                                     // Jan 2026: Bali
+    at(PLACES.Melbourne, '2026-03'), at(PLACES.Tasmania, '2026-03-16'),          // Mar: Melbourne ⇄ Tasmania
+    at(PLACES.Melbourne, '2026-03-21'), at(HOME),
+    at(PLACES.Rome, '2026-04-16'), at(PLACES.Florence, '2026-04-18'),            // Apr: Italy …
+    at(PLACES.Rome, '2026-04-24'), at(PLACES.Naples, '2026-04-25'),              // … → Florida …
+    at(PLACES.Miami, '2026-04'), at(PLACES.Rome, '2026-04'), at(HOME),           // … → home via Rome
+    at(PLACES.Singapore, '2026-09-04'), at(PLACES.Shanghai, '2026-09-05'), at(HOME), // Sep 2026: Singapore → Shanghai
+    at(PLACES.Singapore, '2026-10-14'), at(PLACES.NewYork, '2026-10-14'),        // Oct 2026: US, out via Singapore …
+    at(PLACES.HighPoint, '2026-10-16'), at(PLACES.Minneapolis, '2026-10-18'),
+    at(PLACES.Cleveland, '2026-10-19'), at(PLACES.SanFrancisco, '2026-10-21'),
+    at(PLACES.Singapore, '2026-10-24'), at(HOME),                                // … and home via Singapore
+    at(PLACES.Taiwan, '2026-11-08'), at(HOME),                                   // Nov 2026: Taiwan
 ];
 
 // The curated JOURNEY covers everything up to here (the Nov 2026 Taiwan trip
@@ -128,7 +163,7 @@ const JOURNEY_END = Date.parse('2026-11-13T00:00:00+07:00');
 function buildArcs(waypoints) {
     const arcs = [], seen = new Set();
     for (let i = 0; i < waypoints.length - 1; i++) {
-        const a = waypoints[i], b = waypoints[i + 1];
+        const a = waypoints[i].place, b = waypoints[i + 1].place;
         if (a.lat === b.lat && a.lng === b.lng) continue; // skip zero-length leg
         const key = `${a.lat},${a.lng}|${b.lat},${b.lng}`; // directed — the return is its own arc
         if (seen.has(key)) continue;
@@ -137,9 +172,25 @@ function buildArcs(waypoints) {
     }
     return arcs;
 }
-const TRAVEL_ARCS = buildArcs(JOURNEY);
+// The globe shows only the last TRIP_LIMIT round trips — a trip runs from
+// leaving Jakarta to the next return, and one still in progress counts too —
+// so it stays about this busy however many years of travel pile up. Older
+// trips fall off the front; a place visited twice is still one dot and a
+// repeated route still one arc, while the comet flies every visit in order.
+const TRIP_LIMIT = 10;
+function lastTrips(wp) {
+    const starts = [];
+    for (let i = 0; i < wp.length - 1; i++) {
+        if (wp[i].place === HOME && wp[i + 1].place !== HOME) starts.push(i);
+    }
+    return starts.length > TRIP_LIMIT ? wp.slice(starts[starts.length - TRIP_LIMIT]) : wp;
+}
 
-// City markers = curated base destinations (Jakarta = the live pin) + auto-tracked stops
+// The visits currently on the globe: dots, arcs and the comet all come from it
+let visibleTrail = lastTrips(JOURNEY);
+const TRAVEL_ARCS = buildArcs(visibleTrail);
+
+// Every known place (curated + auto-tracked), for snapping raw pings onto
 const TRAVEL_DOTS = Object.values(PLACES);
 let autoStops = []; // appended from location_history (future travel)
 
@@ -429,9 +480,16 @@ setLocation(-6.2088, 106.8456); // fallback: Jakarta
 // Render travel city dots + the live location pin in one points layer
 // Travel dots use a roomy radius so they're easy to hover (hit area = dot size)
 function renderPoints() {
-    const pts = [...TRAVEL_DOTS, ...autoStops].map(p => ({
+    // One dot per place on the visible trail; its tooltip lists those visits
+    const visits = new Map();
+    for (const v of visibleTrail) {
+        if (v.place === HOME) continue;
+        if (!visits.has(v.place)) visits.set(v.place, []);
+        if (v.date) visits.get(v.place).push(v.date);
+    }
+    const pts = [...visits].map(([p, dates]) => ({
         lat: p.lat, lng: p.lng, color: '#a9b8e8', radius: 0.5, alt: 0.01,
-        name: p.name, date: p.date, kind: 'travel'
+        name: p.name, date: fmtDates(dates), kind: 'travel'
     }));
     if (pinLat !== null) {
         // Large invisible hit target so the tiny beacon is easy to hover
@@ -531,16 +589,16 @@ function applyLocations(locations) {
     for (const loc of fresh) {
         if (kmBetween(loc.lat, loc.lng, HOME.lat, HOME.lng) < 60) continue; // home → live pin
         if ([...TRAVEL_DOTS, ...dots].some(p => kmBetween(loc.lat, loc.lng, p.lat, p.lng) < 60)) continue; // dup
-        const date = new Date(loc.t).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-        dots.push({ name: placeName(_geoCache[geoKey(loc.lat, loc.lng)]), date, lat: loc.lat, lng: loc.lng });
+        dots.push({ name: placeName(_geoCache[geoKey(loc.lat, loc.lng)]), lat: loc.lat, lng: loc.lng });
     }
     autoStops = dots;
+    // Extend the trail through the recorded stops — dots, arcs AND the comet,
+    // from one waypoint list, so new travel (and its return home) shows up in
+    // all three — then keep only the last TRIP_LIMIT trips of it.
+    visibleTrail = lastTrips(trailWaypoints(fresh));
     renderPoints();
-    // Extend the trail through the recorded stops — arcs AND the comet, from
-    // one waypoint list, so new travel (and its return home) shows up in both.
-    const waypoints = trailWaypoints(fresh);
-    globe.arcsData(buildArcs(waypoints));
-    setCometWaypoints(waypoints);
+    globe.arcsData(buildArcs(visibleTrail));
+    setCometWaypoints(visibleTrail);
 
     // Names arrive afterwards. Each dot is the same object the comet's legs
     // point at, so naming it in place also names its arrival popup.
@@ -564,13 +622,15 @@ function snapStop(loc) {
 }
 
 // Curated journey + the recorded stops after it, in order (location_history is
-// oldest-first). A trip still in progress simply has no return leg yet.
+// oldest-first), each dated by its ping. A trip still in progress simply has
+// no return leg yet.
+const isoDay = t => new Date(t).toLocaleDateString('en-CA'); // YYYY-MM-DD
 function trailWaypoints(locations) {
     const wp = [...JOURNEY];
     for (const loc of locations) {
         if (loc.t < JOURNEY_END) continue; // already on the curated trail
         const stop = snapStop(loc);
-        if (stop !== wp[wp.length - 1]) wp.push(stop);
+        if (stop !== wp[wp.length - 1].place) wp.push(at(stop, stop === HOME ? undefined : isoDay(loc.t)));
     }
     return wp;
 }
@@ -664,7 +724,8 @@ function _cart(lat, lng, alt) {
 function buildCometPath(waypoints) {
     const path = [];
     for (let i = 0; i < waypoints.length - 1; i++) {
-        const a = waypoints[i], b = waypoints[i + 1];
+        const av = waypoints[i], bv = waypoints[i + 1];
+        const a = av.place, b = bv.place;
         if (a === b) continue;
         const va = _toVec(a.lat, a.lng), vb = _toVec(b.lat, b.lng);
         const omega = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
@@ -676,7 +737,7 @@ function buildCometPath(waypoints) {
         const A = legApexAlt(a.lat, a.lng, b.lat, b.lng); // same apex as the drawn arc (returns dip)
         const m1 = gc(0.25), m2 = gc(0.75);
         path.push({
-            a, b, omega,
+            a, b, av, bv, omega,
             dur: COMET_LEG_BASE_MS + (omega / Math.PI) * COMET_LEG_DIST_MS,
             P0: _cart(a.lat, a.lng, 0),
             P1: _cart(m1[0], m1[1], A * 1.5),
@@ -686,14 +747,17 @@ function buildCometPath(waypoints) {
     }
     return path;
 }
-let COMET_PATH = buildCometPath(JOURNEY);
+let COMET_PATH = buildCometPath(visibleTrail);
 
-// Swap in a longer trail when auto-tracked travel arrives. The curated journey
-// is always the prefix, so the leg the comet is mid-flight on is unchanged and
-// the replay carries straight on into the new legs on its next pass.
+// Swap in the new trail when tracked travel arrives. Usually it only grew at
+// the end and the comet carries straight on; if an old trip fell off the front
+// the legs shift, so find the one it's mid-flight on by its visits.
 function setCometWaypoints(waypoints) {
+    const cur = COMET_PATH[legIdx];
     COMET_PATH = buildCometPath(waypoints);
-    if (legIdx >= COMET_PATH.length) { legIdx = 0; legT = 0; }
+    const i = cur ? COMET_PATH.findIndex(l => l.av === cur.av && l.bv === cur.bv) : -1;
+    if (i >= 0) legIdx = i;
+    else { legIdx = 0; legT = 0; }
 }
 
 // Comet head + arrival label DOM (positioned each frame via getScreenCoords);
@@ -754,7 +818,7 @@ function isBehindGlobe(lat, lng, alt) {
 }
 
 let legIdx = 0, legT = 0, holdT = 0, replayDone = false;
-let labelCity = null, labelUntil = 0;
+let labelCity = null, labelDate = '', labelUntil = 0;
 let cometPrev = performance.now();
 
 // Evaluate a leg's cubic Bézier at t → {lat, lng, alt}
@@ -799,8 +863,9 @@ function hideComet() {
         if (legT >= 1) {
             legT = 0;
             holdT = COMET_HOLD_MS;
-            const arrived = COMET_PATH[legIdx].b;
-            labelCity = arrived; labelUntil = now + COMET_LABEL_MS; // every stop, home included
+            const arrived = COMET_PATH[legIdx];
+            labelCity = arrived.b; labelDate = arrived.bv.date; // every stop, home included
+            labelUntil = now + COMET_LABEL_MS;
             legIdx++;
             if (legIdx >= COMET_PATH.length) {
                 if (REPLAY_MODE === 'once') { replayDone = true; hideComet(); return; }
@@ -876,11 +941,14 @@ function hideComet() {
 
     // Lingering arrival label at its city
     if (labelCity && labelCity.name && now < labelUntil) { // unnamed stop → no empty popup
-        if (cometLabel.dataset.city !== labelCity.name) {
-            cometLabel.dataset.city = labelCity.name;
-            // Name only — dates live on the pin hover tooltips; "Home" keeps
-            // the Jakarta popup uniform with the dated stops
-            cometLabel.innerHTML = `<span class="replay-label-name">${labelCity.name}</span><span class="replay-label-date">${labelCity === HOME ? 'Home' : ''}</span>`;
+        const key = `${labelCity.name}|${labelDate || ''}`;
+        if (cometLabel.dataset.city !== key) {
+            cometLabel.dataset.city = key;
+            // Name + the date of *this* visit, so the replay reads as a dated
+            // journey (Singapore shows 4 Sep, then 14 Oct, then 24 Oct). Jakarta
+            // just says "Home".
+            const sub = labelCity === HOME ? 'Home' : fmtVisit(labelDate);
+            cometLabel.innerHTML = `<span class="replay-label-name">${labelCity.name}</span><span class="replay-label-date">${sub}</span>`;
         }
         const lc = globe.getScreenCoords(labelCity.lat, labelCity.lng, 0.04);
         if (lc) {
@@ -949,7 +1017,7 @@ const TREND_PAD_TOP = 5, TREND_PAD_BOT = 8;
 const TREND_METRICS = [
     { key: 'steps',    label: 'Steps',    color: '#8f9ed0' },
     { key: 'distance', label: 'Distance', color: '#73a596' },
-    { key: 'calories', label: 'Calories', color: '#bf94a0' },
+    { key: 'calories', label: 'Active Cal', color: '#bf94a0' },
 ];
 
 // Raw-value formatting for the hover tooltip
